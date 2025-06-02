@@ -1721,7 +1721,80 @@ Escanearemos todo (imagen y dependencias) con Trivy.
 Firmaremos la imagen y opcionalmente el .jar con Cosign.
 Emitiremos una firma SLSA Provenance (con GitHub Actions o Jenkins + Rekor).
 
+¿Qué son las  políticas SLSA o inyección de etiquetas SBOM/CycloneDX? 
+
+🧭 ¿Qué estamos construyendo?
+
+En un enfoque Zero Trust realista y profundo, no basta con proteger el runtime. 
+También debemos asegurar la cadena de suministro: desde el código fuente hasta el contenedor que se despliega.
+
+Aquí entra en juego el concepto de Supply Chain Security, es decir, tenemos que asegurar que el fichero compilado es el 
+que se ha compilado y que no ha sido modificado.
+
+🧱 Términos clave explicados
+
+🔑 1. Cosign (parte del ecosistema Sigstore)
+¿Qué es?
+Una herramienta para firmar y verificar contenedores y artefactos (como .jar) usando claves criptográficas o identidad OIDC (GitHub Actions, Google, etc.).
+¿Por qué importa?
+Garantiza que una imagen o artefacto no ha sido modificado desde que fue construido por una fuente confiable.
+Lo usaremos para:
+Firmar tu imagen Docker.
+Firmar el .jar si lo deseas.
+Publicar y verificar esas firmas automáticamente en el registro.
+🪪 2. SBOM (Software Bill of Materials)
+¿Qué es?
+Un archivo que lista todas las dependencias y componentes del software (paquetes, librerías, etc.).
+¿Por qué importa?
+Permite saber exactamente qué contiene tu aplicación. Es clave para:
+Cumplimiento normativo.
+Respuesta ante vulnerabilidades (CVE).
+Auditorías de seguridad.
+Formatos comunes:
+CycloneDX (preferido en entornos modernos)
+SPDX
+🧰 3. Trivy
+¿Qué es?
+Un escáner de seguridad open-source muy completo.
+¿Para qué sirve?
+Detecta vulnerabilidades en:
+Imágenes Docker
+Dependencias de proyectos Java (pom.xml)
+Archivos de configuración (Dockerfile, Kubernetes YAML)
+Archivos SBOM
+Complemento natural a SBOM y Cosign.
+🔒 4. SLSA (Supply-chain Levels for Software Artifacts)
+¿Qué es?
+Un estándar de Google y otros para asegurar la cadena de suministro con niveles crecientes de garantías.
+SLSA 1 a 4, de menor a mayor confianza:
+Código versionado.
+Build automatizado (no manual).
+Build reproducible.
+Build hermético y verificado.
+¿Por qué importa?
+Porque dice “puedes confiar en este binario porque puedo probar de dónde viene”.
+🧪 5. Reproducible Builds
+¿Qué es?
+Técnica que asegura que compilar el mismo código dos veces genera exactamente el mismo binario.
+¿Por qué importa?
+Garantiza que nadie ha inyectado código malicioso durante el build.
+🔐 ¿Qué haremos exactamente?
+
+En tu Jenkinsfile y proceso de CI:
+
+Construiremos el JAR de forma reproducible (sin timestamps ni valores dinámicos).
+Generaremos un SBOM con CycloneDX.
+Escanearemos todo (imagen y dependencias) con Trivy.
+Firmaremos la imagen y opcionalmente el .jar con Cosign.
+Emitiremos una firma SLSA Provenance (con GitHub Actions o Jenkins + Rekor).
+
+
+
+Veremos un un flujo completo con esto en Jenkins, GitHub Actions o ambos? 
+¿Y también generamos las claves Cosign y configuramos el registry GHCR
+
 (Nos quedamos aquí...)
+
 Según Claude,...
 Fortalezas del documento
 Enfoque práctico y realista: El documento no se queda en teoría, sino que proporciona implementaciones concretas con código, configuraciones Docker, Kubernetes, y ejemplos de Spring Boot.

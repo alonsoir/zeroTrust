@@ -1,0 +1,176 @@
+# Zero Trust Spring Boot Application Configuration
+server:
+  port: 8080
+  shutdown: graceful
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+spring:
+  application:
+    name: zero-trust-app
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:development}
+
+  # Configuración por defecto (usará H2)
+  datasource:
+    url: jdbc:h2:mem:devdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    open-in-view: false
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Deshabilitar Flyway por defecto (solo para producción)
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: zero-trust-audit
+      auto-offset-reset: earliest
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:dev-secret-key-change-in-production}
+      access-token-duration-minutes: 15
+      refresh-token-duration-hours: 24
+    risk:
+      high-threshold: 0.9
+
+---
+spring:
+  config:
+    activate:
+      on-profile: development
+
+  # En desarrollo, usar H2 sin Flyway
+  datasource:
+    url: jdbc:h2:mem:devdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Flyway deshabilitado en desarrollo
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    com.example.zerotrust: DEBUG
+    org.springframework.security: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # Flyway deshabilitado en tests
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    com.example.zerotrust: WARN
+    org.springframework: WARN
+
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+
+  # En producción, usar PostgreSQL con Flyway
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:zerotrust}
+    username: ${DB_USERNAME:zerotrust}
+    password: ${DB_PASSWORD:secure_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  h2:
+    console:
+      enabled: false
+
+  # Flyway habilitado solo en producción
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  ssl:
+    enabled: true
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+    risk:
+      high-threshold: 0.5
