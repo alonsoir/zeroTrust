@@ -1788,10 +1788,29 @@ Escanearemos todo (imagen y dependencias) con Trivy.
 Firmaremos la imagen y opcionalmente el .jar con Cosign.
 Emitiremos una firma SLSA Provenance (con GitHub Actions o Jenkins + Rekor).
 
-
-
 Veremos un un flujo completo con esto en Jenkins, GitHub Actions o ambos? 
 ¿Y también generamos las claves Cosign y configuramos el registry GHCR
+
+## 🚀 Estado de Implementación Práctica
+
+### Proyecto de Referencia: zero-trust-spring-boot
+
+Este repositorio incluye una **implementación práctica** que demuestra los conceptos teóricos explicados arriba:
+
+#### ✅ Ya Implementado
+- **HashiCorp Vault integrado** con Spring Cloud Vault
+- **Gestión centralizada de secretos** (JWT, DB credentials)
+- **Bootstrap context** para carga temprana de configuración
+- **Docker Compose** con servicios endurecidos
+- **Multi-perfil** (dev/test/prod) con diferentes niveles de seguridad
+
+#### 🔄 En Desarrollo Activo
+- **Vault modo producción** (TLS, AppRole, policies)
+- **Tokens de corta duración** con renovación automática
+- **ABAC implementation** (Attribute-Based Access Control)
+- **Contenedores hardened** con seccomp/AppArmor
+
+[📖 Ver implementación detallada](./zero-trust-spring-boot/README.md)
 
 (Nos quedamos aquí...)
 

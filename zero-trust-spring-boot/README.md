@@ -1,50 +1,66 @@
 # Zero Trust Spring Boot Application
 
-Una implementación empresarial de arquitectura Zero Trust con Spring Boot 3.3.5.
+Una implementación empresarial de arquitectura Zero Trust con Spring Boot 3.3.5 y gestión centralizada de secretos con HashiCorp Vault.
 
 ## 🎯 Características
 
-- ✅ **Autenticación JWT** con verificación continua
+- ✅ **Gestión de secretos con HashiCorp Vault** - Secretos centralizados y seguros
+- ✅ **Spring Cloud Vault** integrado - Lectura automática de secretos
+- ✅ **Autenticación JWT** con secretos rotativos desde Vault
 - ✅ **Control de acceso granular** basado en contexto
 - ✅ **Auditoría completa** de todas las operaciones
-- ✅ **Base de datos H2** para desarrollo, PostgreSQL para producción
+- ✅ **Multi-base de datos**: H2 (desarrollo), PostgreSQL (producción)
 - ✅ **Tests completos** unitarios, integración y seguridad
 - ✅ **Configuración por perfiles** (development, test, production)
+- ✅ **Docker Compose** para entorno completo
+
+## 🔐 Arquitectura de Secretos
+
+### HashiCorp Vault Integrado
+- **🔑 Gestión centralizada** de secretos JWT, database y API keys
+- **🔄 Bootstrap context** para carga temprana de secretos
+- **📊 Property sources** dinámicos desde Vault
+- **🌐 Multi-entorno** con configuraciones específicas por perfil
+
+### Secretos Gestionados
+- `jwt.secret` - Clave secreta para JWT tokens (rotativo)
+- `database.*` - Credenciales de base de datos
+- Configuraciones específicas por aplicación y entorno
 
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
 - Java 21+
 - Maven 3.9+
+- Docker & Docker Compose
 
-### Desarrollo Local
+### Desarrollo Local con Vault
 
 ```bash
 # 1. Entrar al directorio
 cd zero-trust-spring-boot
 
-# 2. Ejecutar tests
-./scripts/test.sh
+# 2. Levantar infraestructura completa
+docker-compose up -d
 
-# 3. Iniciar aplicación
-./scripts/start-dev.sh
+# 3. Configurar secretos en Vault
+./init-vault.sh
 
-# 4. La aplicación estará disponible en:
-# - http://localhost:8080/api/health
-# - http://localhost:8080/h2-console (desarrollo)
+# 4. Verificar que la aplicación está usando Vault
+curl http://localhost:8080/actuator/health
+
+# 5. Servicios disponibles:
+# - Aplicación: http://localhost:8080
+# - Vault UI: http://localhost:8200 (token: dev-root-token)
+# - PostgreSQL: localhost:5432
+# - Redis: localhost:6379
 ```
 
-### Construcción
+### Desarrollo Sin Docker
 
 ```bash
-# Construir aplicación
-./scripts/build.sh
-
-# Ejecutar con Maven
-./mvnw spring-boot:run
-
-# Ejecutar JAR directamente
-java -jar target/zero-trust-spring-boot-1.0.0.jar
+# Solo para desarrollo rápido (sin Vault)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=development
 ```
 
 ## 📊 Endpoints Disponibles
@@ -54,7 +70,16 @@ java -jar target/zero-trust-spring-boot-1.0.0.jar
 | `/api/health` | Health check de la aplicación | ✅ |
 | `/api/info` | Información de la aplicación | ✅ |
 | `/actuator/health` | Health check de Actuator | ✅ |
+| `/actuator/env` | Variables de entorno (requiere auth) | 🔒 |
+| `/actuator/configprops` | Propiedades de configuración | 🔒 |
 | `/h2-console` | Consola de base de datos H2 | ✅ (solo dev) |
+
+### Autenticación Actuator
+
+```bash
+# Usuario generado automáticamente (ver logs para password)
+curl -u user:{password} http://localhost:8080/actuator/env
+```
 
 ## 🔒 Arquitectura de Seguridad
 
@@ -62,11 +87,54 @@ java -jar target/zero-trust-spring-boot-1.0.0.jar
 1. **Nunca confiar, siempre verificar**
 2. **Privilegios mínimos**
 3. **Verificación continua**
+4. **Secretos centralizados y rotativos**
+
+### Gestión de Secretos
+- **Vault Integration**: Spring Cloud Vault para lectura automática
+- **Bootstrap Context**: Carga de secretos antes del contexto principal
+- **Property Sources**: Vault tiene prioridad sobre configuraciones locales
+- **Fallback Values**: Valores por defecto para desarrollo
 
 ### Headers de Seguridad
 - Content Security Policy (CSP)
 - X-Frame-Options: SAMEORIGIN (para H2 Console)
 - Session Management: STATELESS
+
+## 🐳 Docker & Infraestructura
+
+### Servicios en Docker Compose
+
+```yaml
+# Servicios disponibles:
+services:
+  zero-trust-app:    # Aplicación principal (puerto 8080)
+  vault:            # HashiCorp Vault (puerto 8200)
+  postgres:         # PostgreSQL (puerto 5432)
+  redis:           # Redis (puerto 6379)
+```
+
+### Variables de Entorno (.env)
+
+```bash
+# Aplicación
+SPRING_PROFILES_ACTIVE=development
+APP_PORT=8080
+
+# Vault
+VAULT_HOST=vault
+VAULT_TOKEN=dev-root-token
+VAULT_PORT=8200
+
+# Base de datos
+POSTGRES_PORT=5432
+POSTGRES_DB=zerotrust
+POSTGRES_USER=zerotrust
+POSTGRES_PASSWORD=secure_password
+
+# Redis
+REDIS_PORT=6379
+REDIS_PASSWORD=redis_password
+```
 
 ## 🧪 Testing
 
@@ -77,74 +145,139 @@ java -jar target/zero-trust-spring-boot-1.0.0.jar
 # Tests de integración
 ./mvnw verify
 
-# Suite completa
+# Suite completa con Docker
 ./scripts/test.sh
+
+# Verificar integración con Vault
+./diagnosis.sh
 ```
 
-## 🔧 Configuración
-
-### Variables de Entorno
-
-```bash
-# Perfil activo
-SPRING_PROFILES_ACTIVE=development
-
-# Base de datos (producción)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=zerotrust
-DB_USERNAME=zerotrust
-DB_PASSWORD=secure_password
-```
+## 🔧 Configuración Avanzada
 
 ### Perfiles de Spring
 
-- **development**: H2 en memoria, logs debug, H2 Console habilitado
-- **test**: H2 en memoria para tests, logs mínimos
-- **production**: PostgreSQL, SSL habilitado, sin H2 Console
+- **development**: H2 + Vault dev mode, logs debug
+- **test**: H2 en memoria, Vault deshabilitado
+- **production**: PostgreSQL + Vault production, TLS habilitado
 
-### Configuración H2 Console (Desarrollo)
+### Configuración de Vault por Perfil
 
-- **URL**: http://localhost:8080/h2-console
-- **JDBC URL**: `jdbc:h2:mem:devdb`
-- **User Name**: `sa`
-- **Password**: (dejar vacío)
+```yaml
+# Development
+spring.cloud.vault:
+  host: localhost
+  token: dev-root-token
+  scheme: http
+
+# Production  
+spring.cloud.vault:
+  host: vault-prod.company.com
+  authentication: APPROLE
+  scheme: https
+```
+
+### Verificación de Configuración
+
+```bash
+# Ver secretos cargados desde Vault
+curl -s -u user:{password} http://localhost:8080/actuator/env | grep vault
+
+# Ver configuración JWT
+docker exec -it zero-trust-vault vault kv get secret/zero-trust-app
+```
 
 ## 📋 Scripts Disponibles
 
-- `./scripts/build.sh` - Construir aplicación
-- `./scripts/start-dev.sh` - Iniciar entorno de desarrollo
-- `./scripts/test.sh` - Ejecutar suite de tests
+- `./init-vault.sh` - Configurar secretos en Vault
+- `./diagnosis.sh` - Verificar integración Vault
+- `./mvnw clean package` - Construir aplicación
+- `docker-compose up -d` - Levantar infraestructura
+- `docker-compose logs -f zero-trust-app` - Ver logs
 
-## 🚧 Roadmap
+## 🚧 Estado Actual y Roadmap
 
-### Fase 1 - Completada ✅
+### ✅ Fase 1 - Completada
 - [x] Estructura básica del proyecto
 - [x] Configuración de seguridad básica
 - [x] Health checks y endpoints
 - [x] Tests unitarios e integración
 - [x] Configuración multi-perfil
+- [x] **HashiCorp Vault integración básica**
+- [x] **Spring Cloud Vault configurado**
+- [x] **Secretos JWT desde Vault**
+- [x] **Docker Compose completo**
+- [x] **Bootstrap context funcionando**
 
-### Fase 2 - Próxima
+### 🔄 Fase 2 - En Desarrollo Actual
+- [x] ~~Implementar gestión básica de secretos~~
+- [ ] **Vault producción seguro** (TLS, AppRole, policies)
+- [ ] **Rotación automática de tokens**
+- [ ] **Cifrado en tránsito y reposo**
 - [ ] Implementar TokenService completo
-- [ ] Agregar autenticación JWT
-- [ ] Sistema de auditoría
+- [ ] Sistema de auditoría avanzado
 - [ ] Control de acceso ABAC
-- [ ] Integración PostgreSQL
 
-### Fase 3 - Futuro
+### 🔮 Fase 3 - Próxima
+- [ ] **Auto-unseal con Cloud KMS**
+- [ ] **Secretos dinámicos para DB**
+- [ ] **Vault Agent para rotación**
 - [ ] MFA con TOTP
 - [ ] WebAuthn/FIDO2
 - [ ] Análisis de riesgo ML
 - [ ] Dashboard de seguridad
 
+### 🎯 Fase 4 - Futuro
+- [ ] **Vault Enterprise features**
+- [ ] **Multi-cluster Vault**
+- [ ] **Disaster Recovery**
+- [ ] Kubernetes integration
+- [ ] Service Mesh (Istio)
+- [ ] Zero Trust Network
+
+## 🔍 Troubleshooting
+
+### Problemas Comunes
+
+**Vault no conecta:**
+```bash
+# Verificar que Vault está running
+docker-compose ps vault
+
+# Ver logs de Vault
+docker-compose logs vault
+
+# Verificar conectividad
+docker exec -it zero-trust-app wget --spider http://vault:8200/v1/sys/health
+```
+
+**Secretos no se cargan:**
+```bash
+# Verificar secretos en Vault
+docker exec -it zero-trust-vault vault kv get secret/zero-trust-app
+
+# Ver logs de Spring Cloud Vault
+docker-compose logs zero-trust-app | grep vault
+```
+
+**Bootstrap context issues:**
+- Verificar que `spring-cloud-starter-bootstrap` está en el pom.xml
+- Confirmar que `spring.config.import` está configurado
+- Revisar logs de bootstrap en el arranque
+
 ## 🤝 Contribución
 
 1. Fork el proyecto
-2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
+2. Crear feature branch (`git checkout -b feature/VaultSecurity`)
+3. Commit cambios (`git commit -m 'Add Vault production config'`)
+4. Push al branch (`git push origin feature/VaultSecurity`)
 5. Abrir Pull Request
+
+## 📚 Documentación Adicional
+
+- [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
+- [Spring Cloud Vault Reference](https://docs.spring.io/spring-cloud-vault/docs/current/reference/html/)
+- [Zero Trust Architecture Guide](./docs/zero-trust-guide.md)
+- [Vault Production Hardening](./docs/vault-production.md)
 
 ## 📄 Licencia
 
@@ -155,3 +288,4 @@ Este proyecto está bajo licencia MIT.
 - 📖 Documentación: `./docs/`
 - 🐛 Issues: GitHub Issues
 - 💬 Discusiones: GitHub Discussions
+- 🔐 Vault Issues: Verificar `./diagnosis.sh` primero

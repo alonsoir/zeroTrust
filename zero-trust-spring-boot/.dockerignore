@@ -1,0 +1,16 @@
+target/
+!target/*.jar
+.git/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+README.md
+docs/
+scripts/
