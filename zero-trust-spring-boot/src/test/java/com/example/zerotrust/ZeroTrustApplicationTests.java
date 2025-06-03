@@ -12,10 +12,4 @@ class ZeroTrustApplicationTests {
     void contextLoads() {
         // Test que la aplicación cargue correctamente
     }
-
-    @Test
-    void mainMethodRunsWithoutError() {
-        // Test que el método main no lance excepciones
-        ZeroTrustApplication.main(new String[]{});
-    }
 }

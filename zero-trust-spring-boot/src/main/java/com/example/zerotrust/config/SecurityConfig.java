@@ -9,7 +9,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Configuración de seguridad Zero Trust
- * Versión simplificada sin HSTS para evitar problemas de compatibilidad
+ * Compatible con Spring Boot 3.3.5
  */
 @Configuration
 @EnableWebSecurity
@@ -20,13 +20,13 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers
-                        .frameOptions().sameOrigin()
-                        .contentSecurityPolicy("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"))
+                    .frameOptions().sameOrigin()  // Para H2 Console
+                    .contentSecurityPolicy("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/health", "/api/info", "/actuator/**", "/h2-console/**").permitAll()
-                        .anyRequest().authenticated())
+                    .requestMatchers("/api/health", "/api/info", "/actuator/**", "/h2-console/**").permitAll()
+                    .anyRequest().authenticated())
                 .build();
     }
 }

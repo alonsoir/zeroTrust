@@ -21,19 +21,19 @@ class SecurityConfigTest {
     @Test
     void publicEndpointsShouldBeAccessible() throws Exception {
         mockMvc.perform(get("/api/health"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/info"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/actuator/health"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
     }
 
     @Test
     void protectedEndpointsShouldRequireAuthentication() throws Exception {
-        // Cualquier endpoint no público debería requerir autenticación
+        // Spring Security devuelve 403 por defecto para endpoints protegidos
         mockMvc.perform(get("/api/protected"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 }

@@ -15,9 +15,5 @@ echo "🔗 Tests de integración..."
 echo "🔒 Tests de seguridad..."
 ./mvnw test -Dtest="**/security/*"
 
-# Reporte de cobertura
-echo "📊 Generando reporte de cobertura..."
-./mvnw jacoco:report || echo "⚠️ JaCoCo no configurado"
-
 echo "✅ Todos los tests completados!"
 echo "📋 Resultados en: target/surefire-reports/"

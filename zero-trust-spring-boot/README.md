@@ -4,34 +4,32 @@ Una implementación empresarial de arquitectura Zero Trust con Spring Boot 3.3.5
 
 ## 🎯 Características
 
-- ✅ **Autenticación JWT** con tokens de corta duración
-- ✅ **Verificación continua** de contexto y riesgo
+- ✅ **Autenticación JWT** con verificación continua
+- ✅ **Control de acceso granular** basado en contexto
 - ✅ **Auditoría completa** de todas las operaciones
-- ✅ **Control de acceso ABAC** (Attribute-Based Access Control)
-- ✅ **MFA integrado** para operaciones críticas
-- ✅ **Contenedores seguros** con Chainguard
-- ✅ **Monitoreo completo** con métricas
 - ✅ **Base de datos H2** para desarrollo, PostgreSQL para producción
-- ✅ **Redis** para caché y gestión de tokens
-- ✅ **Kafka** para auditoría de eventos
+- ✅ **Tests completos** unitarios, integración y seguridad
+- ✅ **Configuración por perfiles** (development, test, production)
 
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
 - Java 21+
-- Docker & Docker Compose
 - Maven 3.9+
 
 ### Desarrollo Local
 
 ```bash
-# 1. Clonar y entrar al directorio
+# 1. Entrar al directorio
 cd zero-trust-spring-boot
 
-# 2. Iniciar servicios de infraestructura y aplicación
+# 2. Ejecutar tests
+./scripts/test.sh
+
+# 3. Iniciar aplicación
 ./scripts/start-dev.sh
 
-# 3. La aplicación estará disponible en:
+# 4. La aplicación estará disponible en:
 # - http://localhost:8080/api/health
 # - http://localhost:8080/h2-console (desarrollo)
 ```
@@ -39,46 +37,36 @@ cd zero-trust-spring-boot
 ### Construcción
 
 ```bash
-# Construir aplicación y contenedor
+# Construir aplicación
 ./scripts/build.sh
 
-# Ejecutar tests
-./scripts/test.sh
+# Ejecutar con Maven
+./mvnw spring-boot:run
 
-# Ejecutar con Docker Compose
-docker-compose up -d
-
-# Detener entorno
-./scripts/stop-dev.sh
+# Ejecutar JAR directamente
+java -jar target/zero-trust-spring-boot-1.0.0.jar
 ```
 
-## 📊 Servicios Disponibles
+## 📊 Endpoints Disponibles
 
-| Servicio | URL | Descripción |
-|----------|-----|-------------|
-| **Aplicación** | http://localhost:8080 | API principal |
-| **Health Check** | http://localhost:8080/api/health | Estado de la aplicación |
-| **Info** | http://localhost:8080/api/info | Información de la aplicación |
-| **H2 Console** | http://localhost:8080/h2-console | Base de datos (desarrollo) |
-| **Actuator** | http://localhost:8080/actuator | Métricas y monitoreo |
-| **PostgreSQL** | localhost:5432 | Base de datos (producción) |
-| **Redis** | localhost:6379 | Cache y tokens |
-| **Kafka** | localhost:9092 | Cola de eventos |
+| Endpoint | Descripción | Público |
+|----------|-------------|---------|
+| `/api/health` | Health check de la aplicación | ✅ |
+| `/api/info` | Información de la aplicación | ✅ |
+| `/actuator/health` | Health check de Actuator | ✅ |
+| `/h2-console` | Consola de base de datos H2 | ✅ (solo dev) |
 
 ## 🔒 Arquitectura de Seguridad
 
-Este proyecto implementa los principios Zero Trust:
-
+### Principios Zero Trust Implementados
 1. **Nunca confiar, siempre verificar**
 2. **Privilegios mínimos**
 3. **Verificación continua**
-4. **Auditoría radical**
 
-### Headers de Seguridad Implementados
+### Headers de Seguridad
 - Content Security Policy (CSP)
-- HTTP Strict Transport Security (HSTS)
-- X-Frame-Options
-- X-Content-Type-Options
+- X-Frame-Options: SAMEORIGIN (para H2 Console)
+- Session Management: STATELESS
 
 ## 🧪 Testing
 
@@ -89,100 +77,66 @@ Este proyecto implementa los principios Zero Trust:
 # Tests de integración
 ./mvnw verify
 
-# Suite completa de tests
+# Suite completa
 ./scripts/test.sh
-
-# Tests con cobertura
-./mvnw test jacoco:report
 ```
-
-## 📈 Endpoints de Monitoreo
-
-- **Health Check**: `/api/health`
-- **Info**: `/api/info`
-- **Actuator Health**: `/actuator/health`
-- **Métricas**: `/actuator/metrics`
 
 ## 🔧 Configuración
 
 ### Variables de Entorno
 
 ```bash
-# Base de datos
+# Perfil activo
+SPRING_PROFILES_ACTIVE=development
+
+# Base de datos (producción)
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=zerotrust
 DB_USERNAME=zerotrust
 DB_PASSWORD=secure_password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=redis_password
-
-# JWT
-JWT_SECRET=your-super-secure-jwt-secret
-
-# Kafka
-KAFKA_SERVERS=localhost:9092
 ```
 
 ### Perfiles de Spring
 
-- **development**: H2 en memoria, logs debug
-- **test**: H2 en memoria, sin Flyway
-- **production**: PostgreSQL, SSL habilitado
+- **development**: H2 en memoria, logs debug, H2 Console habilitado
+- **test**: H2 en memoria para tests, logs mínimos
+- **production**: PostgreSQL, SSL habilitado, sin H2 Console
 
 ### Configuración H2 Console (Desarrollo)
 
+- **URL**: http://localhost:8080/h2-console
 - **JDBC URL**: `jdbc:h2:mem:devdb`
 - **User Name**: `sa`
 - **Password**: (dejar vacío)
 
-## 🐳 Docker
-
-```bash
-# Construir imagen
-docker build -t zero-trust-app:latest .
-
-# Ejecutar con Docker Compose
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f zero-trust-app
-
-# Detener todo
-docker-compose down
-```
-
 ## 📋 Scripts Disponibles
 
-- `./scripts/build.sh` - Construir aplicación y contenedor
+- `./scripts/build.sh` - Construir aplicación
 - `./scripts/start-dev.sh` - Iniciar entorno de desarrollo
-- `./scripts/stop-dev.sh` - Detener entorno
 - `./scripts/test.sh` - Ejecutar suite de tests
 
 ## 🚧 Roadmap
 
 ### Fase 1 - Completada ✅
 - [x] Estructura básica del proyecto
-- [x] Configuración de seguridad
-- [x] Health checks y endpoints básicos
+- [x] Configuración de seguridad básica
+- [x] Health checks y endpoints
 - [x] Tests unitarios e integración
-- [x] Docker y docker-compose
+- [x] Configuración multi-perfil
 
 ### Fase 2 - Próxima
 - [ ] Implementar TokenService completo
-- [ ] Agregar MFA con TOTP
-- [ ] Implementar ABAC PolicyEngine
-- [ ] Sistema de auditoría completo
-- [ ] Dashboard de seguridad
+- [ ] Agregar autenticación JWT
+- [ ] Sistema de auditoría
+- [ ] Control de acceso ABAC
+- [ ] Integración PostgreSQL
 
 ### Fase 3 - Futuro
-- [ ] Integrar WebAuthn/FIDO2
-- [ ] Análisis de comportamiento ML
-- [ ] API Gateway integration
-- [ ] Microservices support
+- [ ] MFA con TOTP
+- [ ] WebAuthn/FIDO2
+- [ ] Análisis de riesgo ML
+- [ ] Dashboard de seguridad
 
 ## 🤝 Contribución
 
@@ -194,11 +148,10 @@ docker-compose down
 
 ## 📄 Licencia
 
-Este proyecto está bajo licencia MIT. Ver `LICENSE` para más detalles.
+Este proyecto está bajo licencia MIT.
 
 ## 🆘 Soporte
 
 - 📖 Documentación: `./docs/`
 - 🐛 Issues: GitHub Issues
 - 💬 Discusiones: GitHub Discussions
-- 📧 Email: security-team@company.com
