@@ -12,11 +12,41 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:development}
 
-  # Nueva sintaxis para Spring Boot 3.x
-  config:
-    import: "vault://secret/zero-trust-app"
+  # NO import aquí - se mueve a perfiles específicos
 
-  # Configuración de Vault
+# Configuración JWT por defecto (development)
+app:
+  security:
+    require-auth-for-health-endpoints: false  # Por defecto, health/info son públicos
+  jwt:
+    secret: zero-trust-default-secret-key-change-in-production-must-be-at-least-64-characters
+    access-token-duration: PT15M
+    refresh-token-duration: P7D
+    issuer: zero-trust-app
+    enable-refresh-token-rotation: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.example.zerotrust: DEBUG
+    org.springframework: INFO
+
+---
+# PERFIL DE DESARROLLO (con Vault local)
+spring:
+  config:
+    activate:
+      on-profile: development
+    import: "optional:vault://secret/zero-trust-app"  # <- OPCIONAL
+
   cloud:
     vault:
       enabled: true
@@ -30,7 +60,6 @@ spring:
         backend: secret
         default-context: zero-trust-app
 
-  # Base de datos por defecto (H2)
   datasource:
     url: jdbc:h2:mem:devdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -48,44 +77,23 @@ spring:
       enabled: true
       path: /h2-console
 
-# Configuración JWT usando Vault
+# Configuración de seguridad para desarrollo (health/info públicos)
 app:
-  jwt:
-    secret: ${vault.secret.jwt.secret:zero-trust-default-secret-key-change-in-production-must-be-at-least-64-characters}
-    access-token-duration: PT15M
-    refresh-token-duration: P7D
-    issuer: zero-trust-app
-    enable-refresh-token-rotation: true
+  security:
+    require-auth-for-health-endpoints: false
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,env,configprops
-  endpoint:
-    health:
-      show-details: when-authorized
-
-# Debug logging HABILITADO
 logging:
   level:
-    com.example.zerotrust: DEBUG
-    org.springframework: INFO
     org.springframework.cloud.vault: DEBUG
     org.springframework.vault: DEBUG
-    org.springframework.cloud.bootstrap: DEBUG
-    org.springframework.boot.context.config: DEBUG
 
 ---
+# PERFIL DE TEST (sin Vault)
 spring:
   config:
     activate:
       on-profile: test
-
-  # Vault deshabilitado en tests para simplicidad
-  cloud:
-    vault:
-      enabled: false
+    # NO import - sin Vault en tests
 
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -101,23 +109,68 @@ spring:
     console:
       enabled: false
 
-# JWT usando valores por defecto en tests
+# Configuración de seguridad para test normal (health/info públicos)
 app:
+  security:
+    require-auth-for-health-endpoints: false
   jwt:
     secret: zero-trust-test-secret-key-must-be-at-least-64-characters-long-for-tests
-    access-token-duration: PT15M
-    refresh-token-duration: P7D
-    issuer: zero-trust-app
-    enable-refresh-token-rotation: true
 
 ---
+# PERFIL DE TEST CON SEGURIDAD (para tests de seguridad)
+spring:
+  config:
+    activate:
+      on-profile: test-security
+
+  cloud:
+    vault:
+      enabled: false
+    bootstrap:
+      enabled: false
+    config:
+      enabled: false
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  h2:
+    console:
+      enabled: false
+
+  security:
+    user:
+      name: testuser
+      password: testpass
+      roles: USER
+
+# Configuración de seguridad para tests de seguridad (health/info requieren auth)
+app:
+  security:
+    require-auth-for-health-endpoints: true  # ← Aquí está la diferencia clave
+  jwt:
+    secret: zero-trust-test-secret-key-must-be-at-least-64-characters-long-for-tests
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+---
+# PERFIL DE PRODUCCIÓN (con Vault obligatorio)
 spring:
   config:
     activate:
       on-profile: production
-    import: "vault://secret/zero-trust-app"
+    import: "vault://secret/zero-trust-app"  # <- OBLIGATORIO en prod
 
-  # Vault configuration para producción
   cloud:
     vault:
       enabled: true
@@ -131,7 +184,6 @@ spring:
         backend: secret
         default-context: zero-trust-app
 
-  # Base de datos PostgreSQL usando secretos de Vault
   datasource:
     url: jdbc:postgresql://${vault.secret.database.host:localhost}:${vault.secret.database.port:5432}/${vault.secret.database.name:zerotrust}
     username: ${vault.secret.database.username:zerotrust}
@@ -147,23 +199,18 @@ spring:
     console:
       enabled: false
 
-# JWT usando secretos de Vault en producción
+# Configuración de seguridad para producción (health/info públicos para monitoring)
 app:
+  security:
+    require-auth-for-health-endpoints: false  # ← CAMBIADO: Públicos para load balancers/monitoring
   jwt:
     secret: ${vault.secret.jwt.secret}
-    access-token-duration: PT15M
-    refresh-token-duration: P7D
-    issuer: zero-trust-app
-    enable-refresh-token-rotation: true
 
 server:
   ssl:
-    enabled: false  # Configurar en producción real
+    enabled: false
 
-# Logging más restrictivo en producción
 logging:
   level:
     com.example.zerotrust: INFO
     org.springframework: WARN
-    org.springframework.cloud.vault: DEBUG
-    org.springframework.vault: DEBUG

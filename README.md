@@ -1844,3 +1844,252 @@ Configuración de monitoreo y alertas para arquitecturas Zero Trust
 Integración con Identity Providers específicos
 
 El documento es una excelente base para implementar Zero Trust en entornos Java modernos.
+
+## 🎯 Lecciones Aprendidas - Sesión 06/06/2025
+
+### ✅ Problemas Críticos Resueltos
+
+#### 🔧 **Spring Cloud Vault en Tests**
+**Problema:** Spring Cloud Vault intentaba conectarse durante la ejecución de tests, causando fallos.
+```yaml
+# ❌ Error: Failed to load ApplicationContext - Vault connection required
+# ✅ Solución: Deshabilitación explícita por perfil
+spring:
+  config:
+    activate:
+      on-profile: test
+  cloud:
+    vault:
+      enabled: false
+    bootstrap:
+      enabled: false
+    config:
+      enabled: false
+```
+
+#### 🔒 **Configuración de Seguridad Flexible**
+**Implementación:** Property-driven security configuration
+```java
+// SecurityConfig.java - Approach unificado
+@Configuration
+@EnableWebSecurity
+@ConfigurationProperties(prefix = "app.security")
+public class SecurityConfig {
+    private boolean requireAuthForHealthEndpoints = false;
+    
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        if (requireAuthForHealthEndpoints) {
+            // Configuración para tests de seguridad
+            return http.authorizeHttpRequests(authz -> authz
+                .requestMatchers("/api/**").authenticated())
+                .httpBasic(httpBasic -> {})
+                .build();
+        } else {
+            // Configuración por defecto (desarrollo/producción)
+            return http.authorizeHttpRequests(authz -> authz
+                .requestMatchers("/api/health", "/api/info").permitAll())
+                .build();
+        }
+    }
+}
+```
+
+#### 🆕 **Spring Security 6.1+ Syntax Migration**
+**Actualización:** Eliminación de warnings de deprecación
+```java
+// ❌ Sintaxis deprecada
+.headers(headers -> headers
+    .frameOptions().sameOrigin()
+    .contentSecurityPolicy("default-src 'self'"))
+
+// ✅ Sintaxis moderna Spring Security 6.1+
+.headers(headers -> headers
+    .frameOptions(frame -> frame.sameOrigin())
+    .contentSecurityPolicy(csp -> csp.policyDirectives(
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'")))
+```
+
+### 🧪 **Estrategia de Testing Robusta**
+
+#### **Perfiles de Testing Implementados**
+```yaml
+# application.yml - Configuración por perfiles
+
+---
+# PERFIL "test" - Tests unitarios normales  
+spring:
+  config:
+    activate:
+      on-profile: test
+  cloud:
+    vault:
+      enabled: false
+app:
+  security:
+    require-auth-for-health-endpoints: false  # Endpoints públicos
+
+---
+# PERFIL "test-security" - Tests de seguridad
+spring:
+  config:
+    activate:
+      on-profile: test-security
+  cloud:
+    vault:
+      enabled: false
+  security:
+    user:
+      name: testuser
+      password: testpass
+      roles: USER
+app:
+  security:
+    require-auth-for-health-endpoints: true  # Endpoints protegidos
+```
+
+#### **Configuración de Tests Validada**
+```java
+// ✅ Tests unitarios normales
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "spring.cloud.vault.enabled=false"
+})
+
+// ✅ Tests de seguridad específicos  
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test-security")
+@TestPropertySource(properties = {
+    "spring.cloud.vault.enabled=false"
+    // app.security.require-auth-for-health-endpoints=true ya en perfil
+})
+```
+
+#### **Ejemplo de Test de Seguridad Robusto**
+```java
+@Test
+void healthEndpointShouldRequireAuthentication() throws Exception {
+    // ✅ Sin auth → 401 Unauthorized
+    mockMvc.perform(get("/api/health"))
+            .andExpect(status().isUnauthorized());
+}
+
+@Test
+void healthEndpointShouldReturnOkWithBasicAuth() throws Exception {
+    // ✅ Con auth → 200 OK
+    mockMvc.perform(get("/api/health")
+            .with(httpBasic("testuser", "testpass")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("UP"));
+}
+```
+
+### 📊 **Configuración de Endpoints Dinámicos**
+| Endpoint | Público (default) | Con Property=true | Configurable Via |
+|----------|-------------------|-------------------|------------------|
+| `/api/health` | ✅ | 🔒 | `app.security.require-auth-for-health-endpoints` |
+| `/api/info` | ✅ | 🔒 | `app.security.require-auth-for-health-endpoints` |
+| `/actuator/**` | ✅ | ✅ | No configurable |
+
+---
+
+## 🚧 Estado Actualizado - Fase 1 Completada (06/06/2025)
+
+### ✅ **Completado en esta Sesión**
+- [x] **Configuración de seguridad flexible** - Properties-driven con Spring Security 6.1+
+- [x] **Tests de seguridad completos** - Suite robusta con perfiles `test` y `test-security`
+- [x] **Spring Security modernizado** - Sintaxis 6.1+ sin warnings de deprecación
+- [x] **Test isolation** - Vault deshabilitado automáticamente en tests
+- [x] **Properties-driven security** - Configuración dinámica sin múltiples `@Profile`
+- [x] **Estrategia de testing definida** - Separación clara entre unit tests y security tests
+
+### 🔄 **Próxima Sesión - Prioridades**
+- [ ] **TokenService completo** con validación JWT
+- [ ] **Endpoints de autenticación** (/auth/login, /auth/refresh, /auth/validate)
+- [ ] **Middleware JWT** para requests autenticados
+- [ ] **Rotación automática de tokens** desde Vault
+
+---
+
+## 🔍 Troubleshooting - Nuevas Soluciones
+
+### **Tests fallan con Vault (✅ RESUELTO)**
+```bash
+# ❌ Error: Failed to load ApplicationContext
+# java.lang.IllegalStateException: Cannot create authentication mechanism for TOKEN
+
+# ✅ Solución implementada:
+# 1. Verificar perfil correcto según tipo de test
+# Tests normales: @ActiveProfiles("test") 
+# Tests de seguridad: @ActiveProfiles("test-security")
+
+# 2. Asegurar properties de deshabilitación de Vault
+@TestPropertySource(properties = {
+    "spring.cloud.vault.enabled=false",
+    "spring.cloud.bootstrap.enabled=false", 
+    "spring.cloud.config.enabled=false"
+})
+
+# 3. Verificar credenciales de test funcionan
+curl -u testuser:testpass http://localhost:8080/api/health
+
+# 4. Ejecutar tests específicos
+./mvnw test -Dtest=*SecurityTest -Dspring.profiles.active=test-security
+```
+
+### **Spring Security Deprecation Warnings (✅ RESUELTO)**
+```java
+// ❌ Warning: 'frameOptions()' is deprecated since version 6.1
+// ❌ Warning: 'contentSecurityPolicy(String)' is deprecated since version 6.1
+
+// ✅ Solución: Actualizado a sintaxis moderna
+.headers(headers -> headers
+    .frameOptions(frame -> frame.sameOrigin())
+    .contentSecurityPolicy(csp -> csp.policyDirectives(
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'")))
+```
+
+### **Configuración de Seguridad No Aplica**
+```bash
+# ❌ Problema: Property app.security.require-auth-for-health-endpoints no funciona
+# ✅ Verificar:
+
+# 1. SecurityConfig tiene @ConfigurationProperties
+@ConfigurationProperties(prefix = "app.security")
+public class SecurityConfig {
+
+# 2. Property está en application.yml del perfil correcto
+app:
+  security:
+    require-auth-for-health-endpoints: true
+
+# 3. Verificar valor aplicado en runtime
+curl -v http://localhost:8080/api/health
+# Si devuelve 401 → Property aplicada correctamente
+# Si devuelve 200 → Verificar configuración
+```
+
+---
+
+## 🧪 Comandos de Testing Actualizados
+
+```bash
+# Tests unitarios sin seguridad (endpoints públicos)
+./mvnw test -Dspring.profiles.active=test
+
+# Tests de seguridad con autenticación (endpoints protegidos)  
+./mvnw test -Dtest=*SecurityTest -Dspring.profiles.active=test-security
+
+# Verificar configuración de security aplicada
+./mvnw test -Dtest=HealthControllerSecurityTest -Dlogging.level.org.springframework.security=DEBUG
+
+# Tests completos con diferentes perfiles
+./mvnw verify -Dspring.profiles.active=test,test-security
+
+# Validar que Vault está deshabilitado en tests
+./mvnw test -Dspring.profiles.active=test -Dlogging.level.org.springframework.cloud.vault=DEBUG
+```
+

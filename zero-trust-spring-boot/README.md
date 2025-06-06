@@ -196,24 +196,26 @@ docker exec -it zero-trust-vault vault kv get secret/zero-trust-app
 
 ## 🚧 Estado Actual y Roadmap
 
-### ✅ Fase 1 - Completada
+### ✅ Fase 1 - Completada *(Actualizada hoy 06/06/2025)*
 - [x] Estructura básica del proyecto
-- [x] Configuración de seguridad básica
-- [x] Health checks y endpoints
-- [x] Tests unitarios e integración
-- [x] Configuración multi-perfil
+- [x] **Configuración de seguridad flexible** - Properties-driven con Spring Security 6.1+
+- [x] Health checks y endpoints configurables
+- [x] **Tests completos** - Unitarios, integración y seguridad (con `test-security` profile)
+- [x] **Configuración multi-perfil** - development, test, test-security, production
 - [x] **HashiCorp Vault integración básica**
 - [x] **Spring Cloud Vault configurado**
 - [x] **Secretos JWT desde Vault**
 - [x] **Docker Compose completo**
 - [x] **Bootstrap context funcionando**
+- [x] **Tests aislados** - Sin conflictos con Vault en entorno de testing
 
-### 🔄 Fase 2 - En Desarrollo Actual
-- [x] ~~Implementar gestión básica de secretos~~
+### 🔄 Fase 2 - En Desarrollo Actual *(Próxima sesión)*
+- [ ] **TokenService completo** con validación JWT
+- [ ] **Endpoints de autenticación** (/auth/login, /auth/refresh, /auth/validate)
+- [ ] **Middleware JWT** para requests autenticados
+- [ ] **Rotación automática de tokens** desde Vault
 - [ ] **Vault producción seguro** (TLS, AppRole, policies)
-- [ ] **Rotación automática de tokens**
 - [ ] **Cifrado en tránsito y reposo**
-- [ ] Implementar TokenService completo
 - [ ] Sistema de auditoría avanzado
 - [ ] Control de acceso ABAC
 
@@ -233,6 +235,35 @@ docker exec -it zero-trust-vault vault kv get secret/zero-trust-app
 - [ ] Kubernetes integration
 - [ ] Service Mesh (Istio)
 - [ ] Zero Trust Network
+
+## 🎯 Logros de la Sesión Actual *(06/06/2025)*
+
+### ✅ Problemas Críticos Resueltos
+1. **Tests con Vault** - Solucionado conflicto de Spring Cloud Vault en testing
+2. **Configuración de seguridad flexible** - Property `app.security.require-auth-for-health-endpoints`
+3. **Spring Security 6.1+ compatibility** - Actualizada sintaxis moderna (frameOptions, contentSecurityPolicy)
+4. **Test isolation** - Perfiles `test` y `test-security` funcionando independientemente
+5. **Properties-driven security** - Configuración dinámica sin múltiples `@Profile`
+
+### 🚀 Mejoras Implementadas
+- **SecurityConfig basado en properties** en lugar de configuraciones por perfiles duplicadas
+- **Suite de tests robusta** con casos de autenticación y autorización completos
+- **Configuración centralizada** en application.yml por perfiles
+- **Sintaxis moderna** de Spring Security sin warnings de deprecación
+- **Testing strategy definida** - Unit tests (sin auth) vs Security tests (con auth)
+
+### 📋 Configuración de Tests Finalizada
+```yaml
+# Perfil "test" - Para tests unitarios normales
+app.security.require-auth-for-health-endpoints: false
+
+# Perfil "test-security" - Para tests de seguridad  
+app.security.require-auth-for-health-endpoints: true
+spring.security.user:
+  name: testuser
+  password: testpass
+  roles: USER
+```
 
 ## 🔍 Troubleshooting
 
@@ -264,6 +295,19 @@ docker-compose logs zero-trust-app | grep vault
 - Confirmar que `spring.config.import` está configurado
 - Revisar logs de bootstrap en el arranque
 
+**Tests fallan con Vault *(Resuelto)*:**
+```bash
+# Usar perfiles correctos
+# Tests normales: @ActiveProfiles("test") 
+# Tests de seguridad: @ActiveProfiles("test-security")
+
+# Verificar properties
+@TestPropertySource(properties = {
+    "spring.cloud.vault.enabled=false",
+    "app.security.require-auth-for-health-endpoints=true"  // Solo en security tests
+})
+```
+
 ## 🤝 Contribución
 
 1. Fork el proyecto
@@ -276,6 +320,7 @@ docker-compose logs zero-trust-app | grep vault
 
 - [HashiCorp Vault Documentation](https://www.vaultproject.io/docs)
 - [Spring Cloud Vault Reference](https://docs.spring.io/spring-cloud-vault/docs/current/reference/html/)
+- [Spring Security 6.1+ Migration Guide](https://docs.spring.io/spring-security/reference/migration/index.html)
 - [Zero Trust Architecture Guide](./docs/zero-trust-guide.md)
 - [Vault Production Hardening](./docs/vault-production.md)
 
