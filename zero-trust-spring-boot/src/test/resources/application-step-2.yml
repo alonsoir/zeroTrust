@@ -1,0 +1,124 @@
+# ============================================================================
+# PASO 2: CONFIGURACIÓN AUTOMÁTICA - Spring Boot + Vault (SEGURO)
+# ============================================================================
+
+spring:
+  application:
+    name: zero-trust-step-2
+
+  # ✅ HABILITAR Spring Cloud Vault automático
+  cloud:
+    vault:
+      enabled: true
+      # ✅ Configuración para TestContainers (override dinámico en test)
+      host: localhost
+      port: 8200
+      scheme: http
+      authentication: TOKEN
+      token: step-2-root-token
+      kv:
+        enabled: true
+        backend: secret
+        profile-separator: /
+        application-name: step-2
+      # ✅ FAIL FAST - no degradar sin Vault en test
+      fail-fast: true
+      config:
+        lifecycle:
+          enabled: true
+
+  # ✅ Base de datos H2 para test
+  datasource:
+    # ✅ Configurado dinámicamente en el test vía @DynamicPropertySource
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 2
+
+  # ✅ JPA básica para test
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+  # ✅ DESHABILITAR Security para este paso (test simplificado)
+  security:
+    enabled: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+# ============================================================================
+# JWT CONFIGURATION - ZERO TRUST (ALINEADO CON PRODUCCIÓN)
+# ============================================================================
+app:
+  jwt:
+    # ❌ NO hardcodear secrets - vienen 100% de Vault
+    # ✅ Solo configuraciones no-sensibles pueden tener defaults
+    accessTokenDuration: PT15M  # 15 minutos (será override por Vault)
+    refreshTokenDuration: P7D   # 7 días (será override por Vault)
+    issuer: zero-trust-app      # Default (será override por Vault)
+    enableRefreshTokenRotation: true
+
+  database:
+    # ❌ NO credenciales aquí - vienen 100% de Vault
+    # ✅ Solo configuración no-sensible
+    url: jdbc:postgresql://localhost:5432/zerotrust  # Default (será override por Vault)
+
+  security:
+    # ✅ Para test - health endpoints públicos
+    require-auth-for-health-endpoints: false
+
+# ============================================================================
+# ACTUATOR - Para monitoring de Vault
+# ============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,vault
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+    env:
+      enabled: true
+      show-values: when-authorized
+  health:
+    vault:
+      enabled: true
+    redis:
+      enabled: false
+
+# ============================================================================
+# LOGGING - Para debugging de Vault integration
+# ============================================================================
+logging:
+  level:
+    root: INFO
+    com.example.zerotrust: DEBUG
+    org.springframework.vault: DEBUG      # Ver logs de Vault
+    org.springframework.cloud.vault: DEBUG  # Ver bootstrap process
+    org.springframework.security: ERROR  # Security deshabilitada
+    org.springframework.data.redis: ERROR  # Redis deshabilitado
+    org.testcontainers: INFO
+    # ✅ NUNCA logear secrets
+    org.springframework.vault.core: WARN
+
+# ============================================================================
+# TEST PROPERTIES - Para documentación
+# ============================================================================
+test:
+  step: "2"
+  description: "Spring Boot + Vault automatic integration (SECURE)"
+  vault:
+    bootstrap: true
+    automatic: true
+    injection: "@Value + @ConfigurationProperties"
+    security: "ZERO hardcoded secrets"
+    rotation: "prepared"

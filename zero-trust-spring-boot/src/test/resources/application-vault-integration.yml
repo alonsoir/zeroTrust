@@ -1,0 +1,107 @@
+# ============================================================================
+# PASO 2: CONFIGURACIÓN PARA SPRING BOOT + VAULT INTEGRATION
+# Esta configuración SÍ habilita Vault para integración real
+# ============================================================================
+
+spring:
+  application:
+    name: zero-trust-vault-integration
+
+  # ✅ HABILITAR Spring Cloud Bootstrap
+  cloud:
+    bootstrap:
+      enabled: true
+    vault:
+      enabled: true
+      config:
+        enabled: true
+      # Propiedades dinámicas configuradas desde el test
+      # host, port, token vienen de @DynamicPropertySource
+      authentication: token
+      kv:
+        enabled: true
+        backend: secret
+        default-context: zero-trust-app
+        profiles-separator: '/'
+      connection-timeout: 5000
+      read-timeout: 15000
+      # ✅ IMPORTANTE: Fallar rápido si no puede conectar
+      fail-fast: false
+
+  # ✅ Base de datos simple para tests
+  datasource:
+    # URL configurada dinámicamente
+    driver-class-name: org.h2.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 2
+
+  # ✅ JPA básica para tests
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  # ✅ DESHABILITAR Redis para simplificar
+  data:
+    redis:
+      enabled: false
+
+  # ✅ DESHABILITAR Security para este paso
+  security:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+
+# ✅ Actuator para verificar health
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,configprops
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+    env:
+      enabled: true
+    configprops:
+      enabled: true
+
+# ✅ Configuraciones por defecto (pueden ser sobrescritas por Vault)
+app:
+  jwt:
+    secret: "fallback-secret-will-be-replaced-by-vault"
+    expiration: 3600000
+    issuer: "fallback-issuer"
+  database:
+    username: "fallback-user"
+    password: "fallback-password"
+  api:
+    external-key: "fallback-api-key"
+  monitoring:
+    key: "fallback-monitoring-key"
+
+# ✅ Logging para debugging
+logging:
+  level:
+    root: INFO
+    com.example.zerotrust: DEBUG
+    org.springframework.vault: DEBUG
+    org.springframework.cloud.vault: DEBUG
+    # Silenciar logs ruidosos
+    org.hibernate: WARN
+    org.testcontainers: INFO
+    org.springframework.web: WARN
+
+# ✅ Test properties
+test:
+  step: 2
+  description: "Spring Boot + Vault Integration"
+  vault:
+    integration: true

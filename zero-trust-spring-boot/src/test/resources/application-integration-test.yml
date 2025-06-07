@@ -1,0 +1,114 @@
+# ============================================================================
+# CONFIGURACIÓN DE TESTS DE INTEGRACIÓN PARA ZERO TRUST
+# Esta configuración SÍ habilita Vault y seguridad para tests reales
+# ============================================================================
+
+# ---- SPRING CLOUD VAULT HABILITADO ----
+spring:
+  cloud:
+    bootstrap:
+      enabled: true
+    vault:
+      enabled: true
+      config:
+        enabled: true
+      # Las propiedades dinámicas se configuran desde el test
+      # host, port, token se configuran vía @DynamicPropertySource
+      authentication: token
+      kv:
+        enabled: true
+        backend: secret
+        default-context: zero-trust-app
+      connection-timeout: 5000
+      read-timeout: 15000
+
+  # ---- BASE DE DATOS POSTGRESQL (TestContainers) ----
+  # Las propiedades de conexión se configuran dinámicamente
+  datasource:
+    # URL, username, password configurados vía @DynamicPropertySource
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 5
+
+  # ---- JPA/HIBERNATE ----
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  # ---- REDIS (Opcional para tests de integración) ----
+  data:
+    redis:
+      enabled: false # Deshabilitado por ahora para simplificar
+
+  # ---- SECURITY HABILITADA ----
+  security:
+    enabled: true
+    oauth2:
+      resourceserver:
+        jwt:
+        # Se configurará dinámicamente o via mocking
+
+# ---- ACTUATOR PARA MONITOREO ----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,vault,configprops
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+    vault:
+      enabled: true
+  health:
+    vault:
+      enabled: true
+
+# ---- CONFIGURACIONES DE APLICACIÓN ----
+app:
+  security:
+    jwt:
+      # Estos valores pueden venir de Vault en tests reales
+      secret: ${jwt-secret:fallback-test-secret-key-only-for-testing-must-be-at-least-256-bits-long}
+      expiration: ${jwt-expiration:3600000}
+    risk:
+      high-threshold: 0.8
+
+  vault:
+    # Configuraciones específicas para Vault
+    retry:
+      max-attempts: 3
+      delay: 1000
+    cache:
+      enabled: true
+      ttl: 300
+
+# ---- LOGGING PARA DEBUGGING ----
+logging:
+  level:
+    root: INFO
+    com.example.zerotrust: DEBUG
+    org.springframework.vault: DEBUG
+    org.springframework.cloud.vault: DEBUG
+    org.springframework.security: INFO
+    org.testcontainers: INFO
+    # Silenciar algunos logs ruidosos
+    org.hibernate.SQL: ERROR
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+
+# ---- CONFIGURACIONES ESPECÍFICAS PARA TESTS ----
+test:
+  environment: integration
+  vault:
+    root-token: integration-test-root-token
+  security:
+    # Configuraciones específicas para pruebas de seguridad
+    mock-authentication: false # Usar autenticación real en estos tests

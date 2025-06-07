@@ -1,0 +1,38 @@
+# ============================================================================
+# BOOTSTRAP PASO 2: Configuración inicial de Spring Cloud Vault
+# ============================================================================
+# NOTA: Este archivo es OPCIONAL ya que el test usa System Properties
+
+spring:
+  application:
+    name: zero-trust-step-2
+
+  cloud:
+    vault:
+      # 🔧 Configuración básica (override en test via System Properties)
+      enabled: true
+      host: localhost
+      port: 8200
+      scheme: http
+
+      # 🔐 Autenticación (override en test)
+      authentication: TOKEN
+      token: ${VAULT_TOKEN:step-2-root-token}
+
+      # 📁 KV store configuration
+      kv:
+        enabled: true
+        backend: secret
+        profile-separator: /
+        application-name: step-2
+
+      # ⚙️ Configuración avanzada
+      config:
+        lifecycle:
+          enabled: true
+        order: -10
+
+      # 🔄 Retry y timeouts
+      fail-fast: true
+      connection-timeout: 5000
+      read-timeout: 15000

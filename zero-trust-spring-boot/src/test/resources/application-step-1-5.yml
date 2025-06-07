@@ -1,0 +1,79 @@
+# ============================================================================
+# PASO 1.5: CONFIGURACIÓN SIMPLE - Spring Boot + Vault (sin bootstrap)
+# ============================================================================
+
+spring:
+  application:
+    name: zero-trust-step-1-5
+
+  # ✅ DESHABILITAR completamente Spring Cloud Vault bootstrap
+  cloud:
+    vault:
+      enabled: false
+    bootstrap:
+      enabled: false
+    config:
+      enabled: false
+
+  # ✅ DESHABILITAR Redis
+  data:
+      redis:
+        repositories:
+          enabled: false
+
+  # ✅ Base de datos H2 simple
+  datasource:
+    # Configurado dinámicamente en el test
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 2
+
+  # ✅ JPA básica
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  # ✅ DESHABILITAR Security para este paso
+  security:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+# ✅ Actuator básico SIN Redis
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+  health:
+    redis:
+      enabled: false
+
+# ✅ Logging para ver qué pasa
+logging:
+  level:
+    root: INFO
+    com.example.zerotrust: DEBUG
+    org.springframework.vault: ERROR  # No queremos logs de Vault
+    org.springframework.cloud: ERROR  # No queremos logs de Cloud
+    org.springframework.security: ERROR  # Security deshabilitada
+    org.springframework.data.redis: ERROR  # Redis deshabilitado
+    org.testcontainers: INFO
+
+# ✅ Test properties
+test:
+  step: "1.5"
+  description: "Spring Boot + Vault manual integration"
+  vault:
+    bootstrap: false
+    manual: true
