@@ -19,7 +19,7 @@ import org.springframework.test.context.TestPropertySource;
         "spring.cloud.config.enabled=false",
 
         // Configuraciones de test adicionales
-        "app.jwt.secret=test-secret-key-only-for-testing-must-be-at-least-256-bits-long",
+        "app.jwt.secret=test-secret-key-only-for-testing-must-be-at-least-256-bits-long!!",
 
         // Logging
         "logging.level.org.springframework.cloud=ERROR",

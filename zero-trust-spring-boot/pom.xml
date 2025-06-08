@@ -24,7 +24,8 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- ✅ Versión compatible con Spring Boot 3.3.5 -->
+        <!-- ✅ Versión compatible con Spring Boot 3.3.5 es 1.19.0-->
+
         <testcontainers.version>1.19.0</testcontainers.version>
     </properties>
 
@@ -137,7 +138,11 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <!-- Add Jackson explicitly -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <!-- ✅ Para Vault usamos GenericContainer, no hay módulo específico -->
         <!-- ❌ REMOVIDO: org.testcontainers:vault - No existe -->
 

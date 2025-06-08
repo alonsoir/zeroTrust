@@ -1,40 +1,12 @@
+# src/test/resources/application-vault-integration.yml
 # ============================================================================
-# PASO 2: CONFIGURACIÓN PARA SPRING BOOT + VAULT INTEGRATION
-# Esta configuración SÍ habilita Vault para integración real
+# CONFIGURACIÓN MÍNIMA PARA PERFIL vault-integration
+# Bootstrap DESHABILITADO - toda la configuración de Vault viene de @DynamicPropertySource
 # ============================================================================
 
 spring:
   application:
     name: zero-trust-vault-integration
-
-  # ✅ HABILITAR Spring Cloud Bootstrap
-  cloud:
-    bootstrap:
-      enabled: true
-    vault:
-      enabled: true
-      config:
-        enabled: true
-      # Propiedades dinámicas configuradas desde el test
-      # host, port, token vienen de @DynamicPropertySource
-      authentication: token
-      kv:
-        enabled: true
-        backend: secret
-        default-context: zero-trust-app
-        profiles-separator: '/'
-      connection-timeout: 5000
-      read-timeout: 15000
-      # ✅ IMPORTANTE: Fallar rápido si no puede conectar
-      fail-fast: false
-
-  # ✅ Base de datos simple para tests
-  datasource:
-    # URL configurada dinámicamente
-    driver-class-name: org.h2.Driver
-    hikari:
-      connection-timeout: 20000
-      maximum-pool-size: 2
 
   # ✅ JPA básica para tests
   jpa:
@@ -45,12 +17,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
-  # ✅ DESHABILITAR Redis para simplificar
+  # ✅ DESHABILITAR funcionalidades que no necesitamos
   data:
     redis:
       enabled: false
-
-  # ✅ DESHABILITAR Security para este paso
   security:
     enabled: false
   autoconfigure:
@@ -58,22 +28,17 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
 
-# ✅ Actuator para verificar health
+# ✅ Actuator básico
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,configprops
+        include: health,info
   endpoint:
     health:
       enabled: true
-      show-details: when-authorized
-    env:
-      enabled: true
-    configprops:
-      enabled: true
 
-# ✅ Configuraciones por defecto (pueden ser sobrescritas por Vault)
+# ✅ Configuraciones fallback (serán sobrescritas por Vault si funciona)
 app:
   jwt:
     secret: "fallback-secret-will-be-replaced-by-vault"
@@ -94,14 +59,14 @@ logging:
     com.example.zerotrust: DEBUG
     org.springframework.vault: DEBUG
     org.springframework.cloud.vault: DEBUG
+    org.springframework.cloud.bootstrap: DEBUG
     # Silenciar logs ruidosos
     org.hibernate: WARN
     org.testcontainers: INFO
-    org.springframework.web: WARN
 
 # ✅ Test properties
 test:
   step: 2
-  description: "Spring Boot + Vault Integration"
+  description: "Spring Boot + Vault Integration (Sin Bootstrap)"
   vault:
     integration: true

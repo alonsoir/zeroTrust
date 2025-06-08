@@ -70,30 +70,66 @@ class SpringVaultIntegrationTest {
     private static final TestRestTemplate vaultClient = new TestRestTemplate();
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * MÉTODO ESTÁNDAR para configurar Vault en tests de integración
+     * Elimina la necesidad de archivos bootstrap y configuraciones complejas
+     *
+     * USO: Copiar este método en cualquier test que necesite Vault
+     */
     @DynamicPropertySource
-    static void configureVaultProperties(DynamicPropertyRegistry registry) {
-        vaultBaseUrl = "http://localhost:" + vaultContainer.getMappedPort(8200);
+    static void configureVaultIntegrationTest(DynamicPropertyRegistry registry) {
+        // URL dinámico del contenedor Vault
+        String vaultUrl = "http://localhost:" + vaultContainer.getMappedPort(8200);
 
-        // ✅ Configurar Spring para que SE CONECTE REALMENTE a Vault
+        // ❌ DESHABILITAR Bootstrap completamente
+        registry.add("spring.cloud.bootstrap.enabled", () -> false);
+
+        // ✅ CONFIGURACIÓN COMPLETA DE VAULT
         registry.add("spring.cloud.vault.enabled", () -> true);
+        registry.add("spring.cloud.vault.config.enabled", () -> true);
         registry.add("spring.cloud.vault.host", () -> "localhost");
         registry.add("spring.cloud.vault.port", () -> vaultContainer.getMappedPort(8200));
         registry.add("spring.cloud.vault.scheme", () -> "http");
         registry.add("spring.cloud.vault.token", () -> VAULT_ROOT_TOKEN);
         registry.add("spring.cloud.vault.authentication", () -> "token");
 
-        // ✅ Configurar donde leer los secrets
+        // ✅ CONFIGURACIÓN KV STORE
         registry.add("spring.cloud.vault.kv.enabled", () -> true);
         registry.add("spring.cloud.vault.kv.backend", () -> "secret");
         registry.add("spring.cloud.vault.kv.default-context", () -> APP_SECRET_PATH);
+        registry.add("spring.cloud.vault.kv.profile-separator", () -> "/");
 
-        // ✅ Base de datos simple para este test
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:vaultintegrationtest");
+        // ✅ TIMEOUTS Y RELIABILITY
+        registry.add("spring.cloud.vault.fail-fast", () -> false);
+        registry.add("spring.cloud.vault.connection-timeout", () -> 5000);
+        registry.add("spring.cloud.vault.read-timeout", () -> 15000);
+
+        // ✅ MONITORING
+        registry.add("management.health.vault.enabled", () -> true);
+
+        // ✅ BASE DE DATOS H2 PARA TESTS
+        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:vaulttest" + System.currentTimeMillis());
         registry.add("spring.datasource.username", () -> "sa");
         registry.add("spring.datasource.password", () -> "");
+        registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
 
-        // ✅ JPA
+        // ✅ JPA CONFIGURATION
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.H2Dialect");
+        registry.add("spring.jpa.show-sql", () -> false);
+
+        // ✅ DESHABILITAR FUNCIONALIDADES QUE NO NECESITAMOS
+        registry.add("spring.data.redis.enabled", () -> false);
+        registry.add("spring.security.enabled", () -> false);
+
+        // ✅ LOGGING PARA DEBUG
+        registry.add("logging.level.org.springframework.vault", () -> "DEBUG");
+        registry.add("logging.level.org.springframework.cloud.vault", () -> "DEBUG");
+        registry.add("logging.level.org.springframework.cloud.bootstrap", () -> "ERROR");
+        registry.add("logging.level.org.hibernate", () -> "WARN");
+        registry.add("logging.level.org.testcontainers", () -> "INFO");
+
+        System.out.println("🔧 Vault configurado dinámicamente: " + vaultUrl);
     }
 
     @BeforeAll

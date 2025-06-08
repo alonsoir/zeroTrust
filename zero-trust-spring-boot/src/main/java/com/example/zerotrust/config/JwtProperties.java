@@ -52,7 +52,6 @@ public class JwtProperties {
                             "Check your Vault configuration: app.jwt.secret"
             );
         }
-
         if (secret.length() < 64) {
             throw new IllegalStateException(
                     "🚨 SECURITY VIOLATION: JWT secret must be at least 64 characters for security. " +
