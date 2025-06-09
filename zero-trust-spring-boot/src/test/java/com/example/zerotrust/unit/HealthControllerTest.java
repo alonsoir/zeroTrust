@@ -1,5 +1,6 @@
 package com.example.zerotrust.unit;
 
+import com.example.zerotrust.config.BaseTestConfig;
 import com.example.zerotrust.controller.HealthController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,26 +11,27 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAut
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Test para HealthController sin seguridad
- * Usa addFilters = false para deshabilitar completamente los filtros de Spring Security
+ * Test para HealthController usando configuración base reutilizable
+ * Extiende BaseTestConfig que configura propiedades del sistema ANTES del bootstrap
  */
 @WebMvcTest(controllers = HealthController.class, excludeAutoConfiguration = {
         SecurityAutoConfiguration.class,
         SecurityFilterAutoConfiguration.class,
         UserDetailsServiceAutoConfiguration.class,
         OAuth2ResourceServerAutoConfiguration.class,
-        OAuth2ClientAutoConfiguration.class
+        OAuth2ClientAutoConfiguration.class,
+        // CRÍTICO: Excluir también las configuraciones de Vault
+        org.springframework.cloud.vault.config.VaultAutoConfiguration.class,
+        org.springframework.cloud.vault.config.VaultReactiveAutoConfiguration.class
 })
-@AutoConfigureMockMvc(addFilters = false)  // CRÍTICO: Deshabilita todos los filtros de seguridad
-@ActiveProfiles("test")
-class HealthControllerTest {
+@AutoConfigureMockMvc(addFilters = false)
+class HealthControllerTest extends BaseTestConfig {
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -24,9 +23,9 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- ✅ Versión compatible con Spring Boot 3.3.5 es 1.19.0-->
-
+        <spring-cloud.version>2023.0.4</spring-cloud.version>
         <testcontainers.version>1.19.0</testcontainers.version>
+        <maven.compiler.release>21</maven.compiler.release> <!-- Añadido para consistencia -->
     </properties>
 
     <dependencies>
@@ -91,6 +90,13 @@
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
 
+        <!-- Vault Core para tests manuales -->
+        <dependency>
+            <groupId>org.springframework.vault</groupId>
+            <artifactId>spring-vault-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -126,30 +132,23 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- ✅ TestContainers Dependencies - SOLO las que existen y funcionan -->
+        <!-- TestContainers Dependencies -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Add Jackson explicitly -->
+        <!-- Jackson explicitly -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-        <!-- ✅ Para Vault usamos GenericContainer, no hay módulo específico -->
-        <!-- ❌ REMOVIDO: org.testcontainers:vault - No existe -->
-
-        <!-- ❌ REMOVIDO: org.testcontainers:redis - No existe como módulo separado -->
-        <!-- Para Redis usamos GenericContainer también -->
-
-        <!-- ✅ WebFlux para cliente HTTP en tests -->
+        <!-- WebFlux para cliente HTTP en tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -157,17 +156,15 @@
         </dependency>
     </dependencies>
 
-    <!-- Spring Cloud BOM -->
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
-                <version>2023.0.4</version>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- ✅ TestContainers BOM -->
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
@@ -195,8 +192,6 @@
                     </excludes>
                 </configuration>
             </plugin>
-
-            <!-- ✅ Plugin para tests con TestContainers -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -209,4 +204,26 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>vault-integration-tests</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <dependencies>
+                <!-- Desactivar Spring Cloud Vault en tests -->
+                <dependency>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-starter-vault-config</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-starter-bootstrap</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

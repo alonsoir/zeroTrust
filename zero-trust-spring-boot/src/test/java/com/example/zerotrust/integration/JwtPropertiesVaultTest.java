@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @DisplayName("🔐 JWT Properties - Control Total via @DynamicPropertySource")
-class JwtPropertiesVaultTest {
+class JwtPropertiesVaultTestDynamicOnly {
 
     private static final String VAULT_ROOT_TOKEN = "jwt-test-token-dynamic";
     private static final String APP_SECRET_PATH = "jwt-app-dynamic";

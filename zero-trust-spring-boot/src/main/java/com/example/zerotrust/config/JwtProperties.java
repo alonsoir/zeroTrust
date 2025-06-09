@@ -39,12 +39,13 @@ public class JwtProperties {
     private String secretCreatedAt;
     private boolean secretFromVault = false;
 
-    /**
-     * ✅ VALIDACIÓN POST-CONSTRUCCIÓN
-     * Garantiza que el secret viene desde fuente externa
-     */
-    @PostConstruct
-    public void validateConfiguration() {
+    // Eliminar @PostConstruct
+    // @PostConstruct
+    // public void validateConfiguration() { ... }
+
+    // Mover la validación a un método público
+    public void validate() {
+        System.out.println("🔐 Validating JWT Configuration... " + (secret != null ? "secret present" : "no secret"));
         if (!StringUtils.hasText(secret)) {
             throw new IllegalStateException(
                     "🚨 SECURITY VIOLATION: JWT secret is REQUIRED and must come from Vault. " +

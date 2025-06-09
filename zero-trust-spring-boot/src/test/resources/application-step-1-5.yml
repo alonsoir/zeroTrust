@@ -17,9 +17,9 @@ spring:
 
   # ✅ DESHABILITAR Redis
   data:
-      redis:
-        repositories:
-          enabled: false
+    redis:
+      repositories:
+        enabled: false
 
   # ✅ Base de datos H2 simple
   datasource:
@@ -58,6 +58,13 @@ management:
   health:
     redis:
       enabled: false
+
+# ✅ JWT dummy values para este test (ya que Vault está deshabilitado)
+app:
+  jwt:
+    secret: "dummy-secret-for-step-1-5-test-only"
+    expiration: 3600000
+    issuer: "step-1-5-test-issuer"
 
 # ✅ Logging para ver qué pasa
 logging:

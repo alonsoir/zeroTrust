@@ -1,7 +1,6 @@
 package com.example.zerotrust.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -14,13 +13,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
-
-import java.time.Duration;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,25 +40,28 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.cloud.vault.enabled=false",
                 "spring.cloud.bootstrap.enabled=false",
                 "spring.cloud.config.enabled=false",
-                "spring.cloud.vault.config.lifecycle.enabled=false"
+                "spring.cloud.vault.config.lifecycle.enabled=false",
+                // ✅ SOLUCIÓN: JWT secret con al menos 64 caracteres (elige una opción)
+
+                // Opción 1: Descriptivo (80 caracteres)
+                "app.jwt.secret=dummy-secret-for-step-1-5-with-enough-characters-to-pass-validation-check",
+
+                // Opción 2: Simple con repetición (64 caracteres exactos)
+                // "app.jwt.secret=dummy-secret-for-step-1-5-dummy-secret-for-step-1-5-dummy-12345",
+
+                // Opción 3: Formato más realista (64 caracteres)
+                // "app.jwt.secret=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                "app.jwt.expiration=3600000",
+                "app.jwt.issuer=step-1-5-test"
         }
 )
 @Testcontainers
 @ActiveProfiles("step-1-5")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class Step1_5_SpringBootVaultIntermediateTest {
-
-    private static final String VAULT_ROOT_TOKEN = "step-1-5-root-token";
+class Step1_5_SpringBootVaultIntermediateTest extends BaseVaultIntegrationTest {
 
     @Container
-    static GenericContainer<?> vaultContainer = new GenericContainer<>(DockerImageName.parse("hashicorp/vault:1.15.4"))
-            .withExposedPorts(8200)
-            .withEnv("VAULT_DEV_ROOT_TOKEN_ID", VAULT_ROOT_TOKEN)
-            .withEnv("VAULT_DEV_LISTEN_ADDRESS", "0.0.0.0:8200")
-            .withCommand("vault", "server", "-dev")
-            .waitingFor(Wait.forHttp("/v1/sys/health")
-                    .forPort(8200)
-                    .withStartupTimeout(Duration.ofMinutes(2)));
+    static GenericContainer<?> vaultContainer = createVaultContainer();
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -74,10 +71,6 @@ class Step1_5_SpringBootVaultIntermediateTest {
 
     @Autowired
     private Environment environment;
-
-    private static String vaultBaseUrl;
-    private static final TestRestTemplate vaultClient = new TestRestTemplate();
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -102,7 +95,7 @@ class Step1_5_SpringBootVaultIntermediateTest {
         System.out.println("🔧 PASO 1.5: Preparando secrets en Vault...");
 
         // Crear secrets que luego podremos leer manualmente
-        createSecretsInVault();
+        createStandardSecrets("step-1-5");
 
         System.out.println("✅ Secrets listos para PASO 1.5");
     }
@@ -137,7 +130,10 @@ class Step1_5_SpringBootVaultIntermediateTest {
     @Order(3)
     @DisplayName("🔑 Debería obtener JWT secret de Vault manualmente")
     void shouldGetJwtSecretFromVaultManually() throws Exception {
-        // Leer el secret directamente desde Vault (como en Paso 1)
+        // Usar el método heredado para verificar que el secret existe
+        verifySecretExists("step-1-5/jwt", "jwt-secret", "jwt-expiration", "jwt-issuer");
+
+        // Leer el secret directamente desde Vault
         ResponseEntity<String> response = makeVaultRequest(
                 "/v1/secret/data/step-1-5/jwt",
                 HttpMethod.GET,
@@ -163,6 +159,9 @@ class Step1_5_SpringBootVaultIntermediateTest {
     @Order(4)
     @DisplayName("🗄️ Debería obtener credenciales DB de Vault manualmente")
     void shouldGetDatabaseCredentialsFromVaultManually() throws Exception {
+        // Usar el método heredado
+        verifySecretExists("step-1-5/database", "username", "password", "url");
+
         ResponseEntity<String> response = makeVaultRequest(
                 "/v1/secret/data/step-1-5/database",
                 HttpMethod.GET,
@@ -179,7 +178,7 @@ class Step1_5_SpringBootVaultIntermediateTest {
         assertThat(data.get("username").asText()).isEqualTo("step_1_5_user");
 
         assertThat(data.has("password")).isTrue();
-        assertThat(data.get("password").asText()).startsWith("step_1_5_password");
+        assertThat(data.get("password").asText()).startsWith("step-1-5-password");
 
         System.out.println("✅ Credenciales DB obtenidas de Vault:");
         System.out.println("👤 Username: " + data.get("username").asText());
@@ -198,9 +197,14 @@ class Step1_5_SpringBootVaultIntermediateTest {
         String vaultEnabled = environment.getProperty("spring.cloud.vault.enabled");
         assertThat(vaultEnabled).isEqualTo("false");
 
+        // ✅ NUEVO: Verificar que las propiedades JWT dummy están configuradas
+        String jwtSecret = environment.getProperty("app.jwt.secret");
+        assertThat(jwtSecret).isEqualTo("dummy-secret-for-step-1-5-with-enough-characters-to-pass-validation-check");
+
         System.out.println("✅ Environment configurado correctamente:");
         System.out.println("📊 Datasource: " + datasourceUrl);
         System.out.println("🔐 Vault bootstrap: " + vaultEnabled);
+        System.out.println("🔑 JWT Secret (dummy): " + jwtSecret);
     }
 
     @Test
@@ -232,61 +236,8 @@ class Step1_5_SpringBootVaultIntermediateTest {
         System.out.println("✅ Configuración manual simulada:");
         System.out.println("🔑 JWT configurado: " + configuredJwtSecret.length() + " chars");
         System.out.println("👤 DB User configurado: " + configuredDbUser);
-
-        // ESTA ES LA DIFERENCIA: En Paso 2 esto sería automático con @Value
-        // En Paso 1.5 lo hacemos manualmente como preparación
-    }
-
-    /**
-     * ✅ Crear secrets para este paso intermedio
-     */
-    private static void createSecretsInVault() throws Exception {
-        // JWT secrets
-        Map<String, Object> jwtSecrets = Map.of(
-                "jwt-secret", "step-1-5-jwt-secret-" + System.currentTimeMillis(),
-                "jwt-expiration", "7200000",
-                "jwt-issuer", "step-1-5-zero-trust"
-        );
-
-        // Database secrets
-        Map<String, Object> dbSecrets = Map.of(
-                "username", "step_1_5_user",
-                "password", "step_1_5_password_" + System.currentTimeMillis(),
-                "url", "jdbc:postgresql://db:5432/zerotrust"
-        );
-
-        // Crear ambos secrets
-        String jwtPayload = objectMapper.writeValueAsString(Map.of("data", jwtSecrets));
-        String dbPayload = objectMapper.writeValueAsString(Map.of("data", dbSecrets));
-
-        ResponseEntity<String> jwtResponse = makeVaultRequest(
-                "/v1/secret/data/step-1-5/jwt", HttpMethod.POST, jwtPayload);
-        ResponseEntity<String> dbResponse = makeVaultRequest(
-                "/v1/secret/data/step-1-5/database", HttpMethod.POST, dbPayload);
-
-        if (!jwtResponse.getStatusCode().is2xxSuccessful() || !dbResponse.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Failed to create secrets in Vault");
-        }
-
-        System.out.println("✅ Secrets creados en Vault para PASO 1.5");
-    }
-
-    /**
-     * Helper para hacer requests a Vault
-     */
-    private static ResponseEntity<String> makeVaultRequest(String path, HttpMethod method, String body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Vault-Token", VAULT_ROOT_TOKEN);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> entity = new HttpEntity<>(body, headers);
-
-        return vaultClient.exchange(
-                vaultBaseUrl + path,
-                method,
-                entity,
-                String.class
-        );
+        System.out.println("💡 DIFERENCIA: En Paso 2 esto sería automático con @Value");
+        System.out.println("💡 En Paso 1.5 lo hacemos manualmente como preparación");
     }
 
     @AfterAll

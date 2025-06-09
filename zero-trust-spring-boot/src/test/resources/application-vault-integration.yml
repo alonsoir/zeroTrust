@@ -39,11 +39,11 @@ management:
       enabled: true
 
 # ✅ Configuraciones fallback (serán sobrescritas por Vault si funciona)
-app:
-  jwt:
-    secret: "fallback-secret-will-be-replaced-by-vault"
-    expiration: 3600000
-    issuer: "fallback-issuer"
+# app:
+#  jwt:
+#    secret: "fallback-secret-will-be-replaced-by-vault"
+#    expiration: 3600000
+#    issuer: "fallback-issuer"
   database:
     username: "fallback-user"
     password: "fallback-password"
