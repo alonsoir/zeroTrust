@@ -1,72 +1,24 @@
-# src/test/resources/application-vault-integration.yml
-# ============================================================================
-# CONFIGURACIÓN MÍNIMA PARA PERFIL vault-integration
-# Bootstrap DESHABILITADO - toda la configuración de Vault viene de @DynamicPropertySource
-# ============================================================================
-
 spring:
-  application:
-    name: zero-trust-vault-integration
-
-  # ✅ JPA básica para tests
+  config:
+    activate:
+      on-profile: vault-integration
+  datasource:
+    driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
-
-  # ✅ DESHABILITAR funcionalidades que no necesitamos
   data:
     redis:
       enabled: false
   security:
     enabled: false
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
 
-# ✅ Actuator básico
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      enabled: true
-
-# ✅ Configuraciones fallback (serán sobrescritas por Vault si funciona)
-# app:
-#  jwt:
-#    secret: "fallback-secret-will-be-replaced-by-vault"
-#    expiration: 3600000
-#    issuer: "fallback-issuer"
-  database:
-    username: "fallback-user"
-    password: "fallback-password"
-  api:
-    external-key: "fallback-api-key"
-  monitoring:
-    key: "fallback-monitoring-key"
-
-# ✅ Logging para debugging
 logging:
   level:
-    root: INFO
-    com.example.zerotrust: DEBUG
-    org.springframework.vault: DEBUG
     org.springframework.cloud.vault: DEBUG
-    org.springframework.cloud.bootstrap: DEBUG
-    # Silenciar logs ruidosos
-    org.hibernate: WARN
-    org.testcontainers: INFO
-
-# ✅ Test properties
-test:
-  step: 2
-  description: "Spring Boot + Vault Integration (Sin Bootstrap)"
-  vault:
-    integration: true
+    org.springframework.vault: DEBUG
+    com.example.zerotrust: DEBUG
+    root: INFO

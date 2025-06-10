@@ -1,0 +1,12 @@
+spring:
+    config:
+        activate:
+            on-profile: vault-integration
+    application:
+        name: zero-trust-vault-integration
+    cloud:
+        bootstrap:
+            enabled: true
+    vault:
+        enabled: false
+        fail-fast: false

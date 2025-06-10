@@ -6,11 +6,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cloud.vault.config.VaultAutoConfiguration;
 import org.springframework.cloud.vault.config.VaultReactiveAutoConfiguration;
 import org.springframework.context.annotation.Profile;
 
-@SpringBootApplication
+@TestConfiguration
 @EnableAutoConfiguration(exclude = {
         // Estas SÍ se pueden excluir (son auto-configuraciones)
         SecurityAutoConfiguration.class,

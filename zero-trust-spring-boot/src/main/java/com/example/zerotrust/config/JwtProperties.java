@@ -2,89 +2,110 @@ package com.example.zerotrust.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
+import org.springframework.validation.annotation.Validated;
 
-import jakarta.annotation.PostConstruct;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.time.Duration;
 
 /**
- * ✅ ZERO TRUST JWT Properties - Secrets SOLO desde Vault
- *
- * 🔐 SEGURIDAD:
- * - Secret OBLIGATORIO desde external source (Vault)
- * - NO hardcoded fallbacks
- * - Fail-fast si no hay secret
- * - Preparado para rotación automática
- *
- * 🎯 ALINEADO CON TEST:
- * - Misma estructura que la clase del test
- * - Mismos métodos y propiedades
- * - Compatibilidad total para copy/paste directo
+ * Configuración de propiedades JWT para Zero Trust
+ * Mapea propiedades desde application.yml bajo el prefijo 'app.jwt'
  */
 @Component
 @ConfigurationProperties(prefix = "app.jwt")
+@Validated
 public class JwtProperties {
 
-    // ✅ SIN VALORES POR DEFECTO - obligatorio desde Vault
-    private String secret;
+    /**
+     * Emisor del token JWT (iss claim)
+     */
+    @NotBlank(message = "JWT issuer cannot be blank")
+    private String issuer = "zero-trust-service";
 
-    // ✅ Configuraciones con valores sensatos (no secretos)
+    /**
+     * Duración del access token (tokens de corta duración)
+     */
+    @NotNull(message = "Access token duration cannot be null")
     private Duration accessTokenDuration = Duration.ofMinutes(15);
+
+    /**
+     * Duración del refresh token (tokens de larga duración)
+     */
+    @NotNull(message = "Refresh token duration cannot be null")
     private Duration refreshTokenDuration = Duration.ofDays(7);
-    private String issuer = "zero-trust-app";
+
+    /**
+     * Habilitar rotación automática de refresh tokens
+     */
     private boolean enableRefreshTokenRotation = true;
 
-    // 🔐 Metadatos del secret para auditoría/rotación futura
-    private String secretVersion;
-    private String secretCreatedAt;
+    /**
+     * Algoritmo de firma a utilizar
+     */
+    @NotBlank(message = "Signing algorithm cannot be blank")
+    private String signingAlgorithm = "HS256";
+
+    /**
+     * Tiempo de gracia para validación de tokens (clock skew)
+     */
+    private Duration clockSkew = Duration.ofMinutes(1);
+
+    /**
+     * Audiencia esperada del token (aud claim)
+     */
+    private String audience = "zero-trust-clients";
+
+    /**
+     * Prefijo para el header Authorization
+     */
+    @NotBlank(message = "Token prefix cannot be blank")
+    private String tokenPrefix = "Bearer ";
+
+    /**
+     * Nombre del header donde se envía el token
+     */
+    @NotBlank(message = "Token header cannot be blank")
+    private String tokenHeader = "Authorization";
+
+    /**
+     * Máximo número de tokens activos por usuario
+     */
+    @Positive(message = "Max active tokens must be positive")
+    private int maxActiveTokensPerUser = 5;
+
+    /**
+     * Habilitar blacklist de tokens
+     */
+    private boolean enableTokenBlacklist = true;
+
+    /**
+     * TTL para la blacklist en Redis
+     */
+    private Duration blacklistTtl = Duration.ofDays(30);
+
+    /**
+     * Secret para firmar JWT (puede venir de Vault)
+     */
+    private String secret;
+
+    /**
+     * Indica si el secret viene de Vault
+     */
     private boolean secretFromVault = false;
 
-    // Eliminar @PostConstruct
-    // @PostConstruct
-    // public void validateConfiguration() { ... }
-
-    // Mover la validación a un método público
-    public void validate() {
-        System.out.println("🔐 Validating JWT Configuration... " + (secret != null ? "secret present" : "no secret"));
-        if (!StringUtils.hasText(secret)) {
-            throw new IllegalStateException(
-                    "🚨 SECURITY VIOLATION: JWT secret is REQUIRED and must come from Vault. " +
-                            "No hardcoded fallbacks allowed in Zero Trust architecture. " +
-                            "Check your Vault configuration: app.jwt.secret"
-            );
-        }
-        if (secret.length() < 64) {
-            throw new IllegalStateException(
-                    "🚨 SECURITY VIOLATION: JWT secret must be at least 64 characters for security. " +
-                            "Current length: " + secret.length() + ". " +
-                            "Generate a proper secret in Vault."
-            );
-        }
-
-        // ✅ Log seguro (sin exponer el secret)
-        System.out.println("🔐 JWT Configuration validated:");
-        System.out.println("   Secret source: " + (secretFromVault ? "✅ Vault" : "⚠️ Other"));
-        System.out.println("   Secret length: " + secret.length() + " characters");
-        System.out.println("   Secret version: " + (secretVersion != null ? secretVersion : "unknown"));
-        System.out.println("   Access token duration: " + accessTokenDuration);
-        System.out.println("   Refresh token duration: " + refreshTokenDuration);
-        System.out.println("   Rotation enabled: " + enableRefreshTokenRotation);
+    // Constructores
+    public JwtProperties() {
     }
 
-    // =====================================================
-    // GETTERS Y SETTERS - IDÉNTICOS AL TEST
-    // =====================================================
-
-    public String getSecret() {
-        return secret;
+    // Getters y Setters
+    public String getIssuer() {
+        return issuer;
     }
 
-    public void setSecret(String secret) {
-        this.secret = secret;
-        // 🔍 Detectar si viene de Vault basado en el patrón
-        if (secret != null && (secret.startsWith("vault:") || secret.contains("vault-generated"))) {
-            this.secretFromVault = true;
-        }
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
     }
 
     public Duration getAccessTokenDuration() {
@@ -103,14 +124,6 @@ public class JwtProperties {
         this.refreshTokenDuration = refreshTokenDuration;
     }
 
-    public String getIssuer() {
-        return issuer;
-    }
-
-    public void setIssuer(String issuer) {
-        this.issuer = issuer;
-    }
-
     public boolean isEnableRefreshTokenRotation() {
         return enableRefreshTokenRotation;
     }
@@ -119,47 +132,174 @@ public class JwtProperties {
         this.enableRefreshTokenRotation = enableRefreshTokenRotation;
     }
 
-    // =====================================================
-    // METADATOS PARA ROTACIÓN FUTURA
-    // =====================================================
-
-    public String getSecretVersion() {
-        return secretVersion;
+    public String getSigningAlgorithm() {
+        return signingAlgorithm;
     }
 
-    public void setSecretVersion(String secretVersion) {
-        this.secretVersion = secretVersion;
+    public void setSigningAlgorithm(String signingAlgorithm) {
+        this.signingAlgorithm = signingAlgorithm;
     }
 
-    public String getSecretCreatedAt() {
-        return secretCreatedAt;
+    public Duration getClockSkew() {
+        return clockSkew;
     }
 
-    public void setSecretCreatedAt(String secretCreatedAt) {
-        this.secretCreatedAt = secretCreatedAt;
+    public void setClockSkew(Duration clockSkew) {
+        this.clockSkew = clockSkew;
+    }
+
+    public String getAudience() {
+        return audience;
+    }
+
+    public void setAudience(String audience) {
+        this.audience = audience;
+    }
+
+    public String getTokenPrefix() {
+        return tokenPrefix;
+    }
+
+    public void setTokenPrefix(String tokenPrefix) {
+        this.tokenPrefix = tokenPrefix;
+    }
+
+    public String getTokenHeader() {
+        return tokenHeader;
+    }
+
+    public void setTokenHeader(String tokenHeader) {
+        this.tokenHeader = tokenHeader;
+    }
+
+    public int getMaxActiveTokensPerUser() {
+        return maxActiveTokensPerUser;
+    }
+
+    public void setMaxActiveTokensPerUser(int maxActiveTokensPerUser) {
+        this.maxActiveTokensPerUser = maxActiveTokensPerUser;
+    }
+
+    public boolean isEnableTokenBlacklist() {
+        return enableTokenBlacklist;
+    }
+
+    public void setEnableTokenBlacklist(boolean enableTokenBlacklist) {
+        this.enableTokenBlacklist = enableTokenBlacklist;
+    }
+
+    public Duration getBlacklistTtl() {
+        return blacklistTtl;
+    }
+
+    public void setBlacklistTtl(Duration blacklistTtl) {
+        this.blacklistTtl = blacklistTtl;
+    }
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
     }
 
     public boolean isSecretFromVault() {
         return secretFromVault;
     }
 
+    public void setSecretFromVault(boolean secretFromVault) {
+        this.secretFromVault = secretFromVault;
+    }
+
+    // Métodos alternativos sin prefijo get/is (para compatibilidad con código existente)
+    public String secret() {
+        return getSecret();
+    }
+
+    public String issuer() {
+        return getIssuer();
+    }
+
+    public String algorithm() {
+        return getSigningAlgorithm();
+    }
+
+    public Duration accessTokenDuration() {
+        return getAccessTokenDuration();
+    }
+
+    public Duration refreshTokenDuration() {
+        return getRefreshTokenDuration();
+    }
+
+    public boolean enableRefreshTokenRotation() {
+        return isEnableRefreshTokenRotation();
+    }
+
     /**
-     * ✅ MÉTODO PARA AUDITORÍA
-     * NO expone el secret, solo metadatos
+     * Método de validación
+     */
+    public boolean validate() {
+        return isValid();
+    }
+
+    /**
+     * Obtiene información del secret para debugging/logging
      */
     public String getSecretInfo() {
-        return String.format("Secret{length=%d, source=%s, version=%s, created=%s}",
-                secret != null ? secret.length() : 0,
-                secretFromVault ? "Vault" : "Other",
-                secretVersion != null ? secretVersion : "unknown",
-                secretCreatedAt != null ? secretCreatedAt : "unknown"
-        );
+        if (secret == null) {
+            return "Secret not configured";
+        }
+
+        String source = secretFromVault ? "Vault" : "Configuration";
+        String length = secret.length() > 0 ? String.valueOf(secret.length()) : "0";
+        return String.format("Secret loaded from %s (length: %s characters)", source, length);
+    }
+
+    // Métodos de utilidad
+    /**
+     * Obtiene la duración del access token en segundos
+     */
+    public long getAccessTokenDurationSeconds() {
+        return accessTokenDuration.getSeconds();
+    }
+
+    /**
+     * Obtiene la duración del refresh token en segundos
+     */
+    public long getRefreshTokenDurationSeconds() {
+        return refreshTokenDuration.getSeconds();
+    }
+
+    /**
+     * Verifica si la configuración es válida
+     */
+    public boolean isValid() {
+        return issuer != null && !issuer.trim().isEmpty() &&
+                accessTokenDuration != null && !accessTokenDuration.isNegative() &&
+                refreshTokenDuration != null && !refreshTokenDuration.isNegative() &&
+                accessTokenDuration.compareTo(refreshTokenDuration) < 0 && // Access token debe ser menor que refresh
+                secret != null && !secret.trim().isEmpty(); // Secret debe estar configurado
     }
 
     @Override
     public String toString() {
-        // ✅ NUNCA exponer el secret en toString
-        return String.format("JwtProperties{secretInfo='%s', accessTokenDuration=%s, refreshTokenDuration=%s, issuer='%s', rotationEnabled=%s}",
-                getSecretInfo(), accessTokenDuration, refreshTokenDuration, issuer, enableRefreshTokenRotation);
+        return "JwtProperties{" +
+                "issuer='" + issuer + '\'' +
+                ", accessTokenDuration=" + accessTokenDuration +
+                ", refreshTokenDuration=" + refreshTokenDuration +
+                ", enableRefreshTokenRotation=" + enableRefreshTokenRotation +
+                ", signingAlgorithm='" + signingAlgorithm + '\'' +
+                ", clockSkew=" + clockSkew +
+                ", audience='" + audience + '\'' +
+                ", tokenPrefix='" + tokenPrefix + '\'' +
+                ", tokenHeader='" + tokenHeader + '\'' +
+                ", maxActiveTokensPerUser=" + maxActiveTokensPerUser +
+                ", enableTokenBlacklist=" + enableTokenBlacklist +
+                ", blacklistTtl=" + blacklistTtl +
+                ", secretConfigured=" + (secret != null && !secret.isEmpty()) +
+                ", secretFromVault=" + secretFromVault +
+                '}';
     }
 }
