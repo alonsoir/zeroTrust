@@ -2092,4 +2092,112 @@ curl -v http://localhost:8080/api/health
 # Validar que Vault está deshabilitado en tests
 ./mvnw test -Dspring.profiles.active=test -Dlogging.level.org.springframework.cloud.vault=DEBUG
 ```
+---
+
+## 🧪 Evaluación de Tests mediante Mutation Testing
+
+### 🎯 Objetivo
+
+En entornos Zero Trust, **la confianza en el sistema no debe derivar de suposiciones** como “los tests están verdes” o “tenemos 90% de cobertura”. La verdadera seguridad comienza cuando se puede verificar que los tests:
+
+* Cubren casos relevantes.
+* Detectan fallos lógicos.
+* Protegen contra regresiones silenciosas.
+
+Para ello, empleamos **mutation testing**, una técnica diseñada no para validar el código de producción, sino **la calidad de nuestros tests**.
+
+---
+
+### 🧬 ¿Qué es Mutation Testing?
+
+Mutation testing consiste en **alterar automáticamente el código de producción** (introduciendo pequeños errores conocidos como *mutantes*) y comprobar si los tests son capaces de detectarlos.
+
+#### Ejemplo:
+
+```java
+// Código original
+if (a > b) return "mayor";
+
+// Mutación automática
+if (a < b) return "mayor";
+```
+
+Si los tests **no fallan tras este cambio**, significa que **el mutante ha sobrevivido** y el test **no valida correctamente la lógica**.
+
+---
+
+### 🚫 ¿Qué no es?
+
+* No evalúa la calidad del diseño del código.
+* No evalúa seguridad, escalabilidad o patrones de arquitectura.
+* No reemplaza a SonarQube, PMD, linters o herramientas de análisis estático.
+
+---
+
+### ✅ ¿Qué detecta?
+
+* Tests que **no hacen aserciones**.
+* Tests que **ejecutan código sin verificar resultados**.
+* Tests con **entradas irrelevantes** que no disparan condiciones lógicas clave.
+* Tests que pasan por el código pero **no lo validan de forma significativa**.
+
+---
+
+### 🧠 Por qué lo usamos
+
+En Zero Trust, **nada debe darse por supuesto**. Si un test no es capaz de detectar que una condición ha cambiado de `>` a `<`, entonces no tenemos garantía de que el sistema responderá correctamente ante modificaciones o ataques.
+
+Mutation testing **revela tests inútiles** que habrían pasado cualquier cambio lógico. Es una defensa activa contra la falsa confianza.
+
+---
+
+### 🛠️ Herramienta recomendada: **PITEST**
+
+**Java**:
+
+* [https://pitest.org/](https://pitest.org/)
+* Se integra fácilmente con Maven o Gradle.
+* Informa de mutaciones sobrevivientes.
+* Revela debilidades reales en los tests, incluso con cobertura alta.
+
+```xml
+<!-- Ejemplo básico para Maven -->
+<plugin>
+  <groupId>org.pitest</groupId>
+  <artifactId>pitest-maven</artifactId>
+  <version>1.15.2</version>
+  <configuration>
+    <targetClasses>
+      <param>com.tuservicio.*</param>
+    </targetClasses>
+  </configuration>
+</plugin>
+```
+
+Ejecutar:
+
+```bash
+mvn org.pitest:pitest-maven:mutationCoverage
+```
+
+---
+
+### 🧩 Complementos recomendados
+
+| Objetivo                               | Herramienta                  |
+| -------------------------------------- | ---------------------------- |
+| **Calidad del código**                 | SonarQube, PMD               |
+| **Validación estructural**             | ArchUnit                     |
+| **Seguridad en dependencias**          | OWASP Dependency-Check, Snyk |
+| **Resiliencia en tiempo de ejecución** | Chaos Engineering, Fuzzing   |
+
+---
+
+### 📌 Recomendaciones prácticas
+
+* Aplica mutation testing como parte del pipeline de CI/CD.
+* Trata cada mutante sobreviviente como un *test smell*.
+* No te obsesiones con alcanzar el 100%: apunta a matar los mutantes más críticos primero.
+* Documenta y refuerza los tests cuando un mutante sobrevive.
+
 
