@@ -2201,3 +2201,66 @@ mvn org.pitest:pitest-maven:mutationCoverage
 * Documenta y refuerza los tests cuando un mutante sobrevive.
 
 
+---
+
+## 🧠 Guía rápida: ¿Ignorar o reforzar un mutante sobreviviente?
+
+Mutation testing con PITEST nos ayuda a verificar si nuestros tests detectan errores reales. Pero **no todos los mutantes sobrevivientes son igual de importantes**.
+
+Usa esta tabla para tomar decisiones informadas:
+
+---
+
+### ✅ **Refuerza el test si...**
+
+| Escenario                                                                                                   | Acción recomendada                                                                                                |
+| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| El mutante cambia la **lógica de negocio principal** (`+ → -`, `if → false`, `return x → return 0`).        | Añade un test con inputs que disparen ese flujo. Asegúrate de validar el resultado con aserciones significativas. |
+| El código mutado está en un **método con reglas de negocio** (controladores, servicios, lógica de negocio). | Asegura cobertura funcional y valida los efectos colaterales (persistencia, excepciones, etc.).                   |
+| El test actual **pasa por el código mutado pero no hace ninguna validación**.                               | Añade aserciones o refactoriza el test para comprobar resultados.                                                 |
+| El mutante sobrevive en una **condición importante** (`a > b → a <= b`).                                    | Añade casos límite (`a == b`, `a < b`, `a > b`) para cubrir todos los caminos.                                    |
+
+---
+
+### ⚪️ **Puedes ignorarlo si...** (pero documenta la razón)
+
+| Escenario                                                                     | Justificación aceptable                                                        |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| El código mutado está en un **getter, setter o constructor trivial**.         | No aporta lógica significativa; opcionalmente exclúyelo con `excludedMethods`. |
+| La mutación ocurre en una **clase DTO o POJO sin lógica**.                    | Se puede ignorar o excluir por configuración.                                  |
+| El código pertenece a una **dependencia externa, librería o proxy**.          | Exclúyelo por clase o paquete. No es código propio.                            |
+| La mutación causa **errores internos (timeouts, excepciones no relevantes)**. | Revisa el test, pero si no tiene impacto funcional, puede ignorarse.           |
+| El código mutado está en una **función de logging, métricas o trazas**.       | No afecta la lógica del negocio.                                               |
+
+---
+
+### 🛑 Casos donde **no debes ignorar el mutante**
+
+| Caso                                                                                | Por qué importa                                             |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| El mutante cambia un `return true` a `return false` en una validación.              | Puede permitir bypass de seguridad o decisiones erróneas.   |
+| El test pasa sin aserciones.                                                        | El test **no prueba nada**, aunque pase. Es un test muerto. |
+| Hay solo un test para un método con múltiples flujos (`if`, `else`, `throw`, etc.). | Falta cobertura de ramas. Refuerza con más casos.           |
+
+---
+
+### 🛠️ Recomendaciones adicionales
+
+* Usa `excludedClasses` y `excludedMethods` con criterio: **no abuses de ellos para silenciar problemas reales**.
+* Mantén los informes de PITEST como parte del pipeline, pero revisa manualmente las mutaciones sobrevivientes clave.
+* Documenta en cada PR por qué un mutante sobreviviente es aceptable si decides ignorarlo.
+
+---
+
+### 📋 Ejemplo de comentario justificando un mutante ignorado
+
+```markdown
+🔶 PITEST mutante sobreviviente en `UserDto.getEmail()`
+→ Ignorado porque es un getter sin lógica. No tiene sentido probar cambios como `return null` o `return ""`.
+
+Configurado en `<excludedMethods>` como `get*`
+```
+
+---
+
+
